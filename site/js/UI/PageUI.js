@@ -10,17 +10,17 @@ export class PageUI {
         this.#elems = elems;
     }
 
-	get VerticalKeys() {
-		return document.querySelector('#VerticalKeys');
-	}
+    get VerticalKeys() {
+        return document.querySelector('#VerticalKeys');
+    }
 
-	get HorizontalKeys() {
-		return document.querySelector('#HorizontalKeys');
-	}
+    get HorizontalKeys() {
+        return document.querySelector('#HorizontalKeys');
+    }
 
-	get VerticalKeys() {
-	    return document.querySelector('#VerticalKeys');
-	}
+    get VerticalKeys() {
+        return document.querySelector('#VerticalKeys');
+    }
 
     log(msg) {
         let elem = document.querySelector('#ConsoleLog');

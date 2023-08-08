@@ -70,7 +70,7 @@ main > section:first-child > div {
 }
 .panel {
     margin-right:4px;
-	background-color:white;
+    background-color:white;
     border-radius:5px;
 }
 .rounded {
@@ -79,7 +79,7 @@ main > section:first-child > div {
 }
 
 fieldset > legend {
-	font-weight:bold;
+    font-weight:bold;
 }
 
 div {

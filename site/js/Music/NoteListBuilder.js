@@ -13,11 +13,11 @@ export class NoteGroup {
 
     get NoteList() { return this.#noteList }
 
-	getBestNote(note) {
-		if (this.#noteList.length > 0)
-			return this.#noteList[0];
-		return null;
-	}
+    getBestNote(note) {
+        if (this.#noteList.length > 0)
+            return this.#noteList[0];
+        return null;
+    }
 
     addNote(note) {
         this.#noteList.push(note);
@@ -33,9 +33,9 @@ export class NoteGroup {
 // map = MicroId -> NoteGroup
 export class NoteTable extends Map {
     #pivotNoteList = null;
-	#noteLists = [];
-	#matchedNotes = [];
-	#unmatchedNotes = [];
+    #noteLists = [];
+    #matchedNotes = [];
+    #unmatchedNotes = [];
     #pivotBounds = { firstMicroId:-1, lastMicroId:0 };
     #noteBounds = { firstMicroId:-1, lastMicroId:0 };
 
@@ -43,11 +43,11 @@ export class NoteTable extends Map {
         super();
         this.#pivotNoteList = pivotNoteList;
 
-		for (let note of pivotNoteList)
-			this.set(note.MicroId, new NoteGroup(note));
+        for (let note of pivotNoteList)
+            this.set(note.MicroId, new NoteGroup(note));
 
         this.#noteLists.push(noteList);
-		this.joinList(noteList);
+        this.joinList(noteList);
     }
 
     get PivotNoteList() { return this.#pivotNoteList }

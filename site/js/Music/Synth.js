@@ -3,29 +3,29 @@ import { MusicScale, MusicNote } from "./Scales/MusicScale.js"
 
 export class Synth {
     #instruments = new Map();
-	#activeInstrument = null;
+    #activeInstrument = null;
     #masterVolume = 1.0;
     #audioCtx = null;
 
-	constructor(music, instrumentAry = null) {
-    	this.#audioCtx = new AudioContext();
+    constructor(music, instrumentAry = null) {
+        this.#audioCtx = new AudioContext();
         console.log("Web Audio API initialized");
 
-		let noteList = NoteListBuilder.getPianoNotes(music);
+        let noteList = NoteListBuilder.getPianoNotes(music);
 
-		let toneInstrument = new ToneInstrument(this.#audioCtx, noteList);
-		this.addInstrument(toneInstrument);
+        let toneInstrument = new ToneInstrument(this.#audioCtx, noteList);
+        this.addInstrument(toneInstrument);
         this.#activeInstrument = toneInstrument;
-		this.#activeInstrument.enable();
+        this.#activeInstrument.enable();
 
-		if (Array.isArray(instrumentAry)) {
-			for (const i of instrumentAry) {
-				if (i.Name != 'Tone')
-					this.addInstrument(instrumentAry);
-			}
-		}
+        if (Array.isArray(instrumentAry)) {
+            for (const i of instrumentAry) {
+                if (i.Name != 'Tone')
+                    this.addInstrument(instrumentAry);
+            }
+        }
 
-	}
+    }
 
     get ActiveInstrument() { return this.#activeInstrument }
     get MasterVolume() { return this.#masterVolume }
@@ -35,75 +35,75 @@ export class Synth {
         this.#instruments.set(instrument.Name, instrument);
     }
 
-	enable(name) {
-		let instrument = this.#instruments.get(name);
-		if (instrument != null) {
-			if (!instrument.equals(this.#activeInstrument))
-				this.#activeInstrument.disable();
+    enable(name) {
+        let instrument = this.#instruments.get(name);
+        if (instrument != null) {
+            if (!instrument.equals(this.#activeInstrument))
+                this.#activeInstrument.disable();
 
             this.#activeInstrument = instrument;
-			this.#activeInstrument.enable();
+            this.#activeInstrument.enable();
             this.#activeInstrument.Volume = this.MasterVolume;
-		}
-	}
+        }
+    }
 
-	pause() {
-		this.#activeInstrument.pause();
-	}
+    pause() {
+        this.#activeInstrument.pause();
+    }
 
-	resume() {
-		this.#activeInstrument.resume();
-	}
+    resume() {
+        this.#activeInstrument.resume();
+    }
 
-	disable() {
-		this.#activeInstrument.disable();
-	}
+    disable() {
+        this.#activeInstrument.disable();
+    }
 
-	mute() {
-		this.#activeInstrument.mute();
-	}
+    mute() {
+        this.#activeInstrument.mute();
+    }
 
-	volume(vol) {
-		this.#activeInstrument.volume(vol);
-	}
+    volume(vol) {
+        this.#activeInstrument.volume(vol);
+    }
 }
 
 export class SynthInstrument {
-	#name = null;
+    #name = null;
     #volume = 1.0;
-	#polyphony = 10;
-	#midiMap = new Map();	// midiNote -> Note
-	#keyMap = new Map();	// keyNum -> Note
+    #polyphony = 10;
+    #midiMap = new Map();    // midiNote -> Note
+    #keyMap = new Map();    // keyNum -> Note
 
     constructor(name, noteList) {
-		this.#name = name;
-		this.setNoteList(noteList);
+        this.#name = name;
+        this.setNoteList(noteList);
     }
 
     setNoteList(noteList) {
-		this.disable();
-		for (let note of noteList) {
-        	let key = this.#key(note.MidiNum, note.MicroDist);
-			this.#midiMap.set(key, note);
-			this.#keyMap.set(note.KeyNum, note);
-		}
-		this.enable();
-	}
+        this.disable();
+        for (let note of noteList) {
+            let key = this.#key(note.MidiNum, note.MicroDist);
+            this.#midiMap.set(key, note);
+            this.#keyMap.set(note.KeyNum, note);
+        }
+        this.enable();
+    }
 
-	set Name(val) { this.#name = val }
-	get Name() { return this.#name }
+    set Name(val) { this.#name = val }
+    get Name() { return this.#name }
 
-	set Volume(val) { this.#volume = val }
-	get Volume() { return this.#volume }
+    set Volume(val) { this.#volume = val }
+    get Volume() { return this.#volume }
 
-	get Polyphony() { return this.#polyphony }
-	set Polyphony(val) {
-		if (val > 0 && val <= 16)
-			this.#polyphony = val;
-	}
+    get Polyphony() { return this.#polyphony }
+    set Polyphony(val) {
+        if (val > 0 && val <= 16)
+            this.#polyphony = val;
+    }
 
-	set MidiMap(map) { this.#midiMap = map }
-	get MidiMap() { this.#midiMap = map }
+    set MidiMap(map) { this.#midiMap = map }
+    get MidiMap() { this.#midiMap = map }
 
     getNote(midiNum, microDist = 0) {
         let key = this.#key(midiNum, microDist);
@@ -114,30 +114,30 @@ export class SynthInstrument {
         return midiNum + '_' + microDist;
     }
 
-	equals(instrument) {
+    equals(instrument) {
         if (instrument != null)
-		    return this.Name == instrument.Name;
+            return this.Name == instrument.Name;
         return false;
-	}
+    }
 
     enable() { }
     disable() { }
 
-	// play midi note
-	noteOn(midiNote, velocity = 1.0) { }
+    // play midi note
+    noteOn(midiNote, velocity = 1.0) { }
     noteOff(midiNote) { }
     
-	// play a letter key (A, C#, Db ...)
-	// micronum (... -1, 0, 1 ...), 0 is normal piano note
-	keyOn(keyNote, octave, microDist = 0, velocity = 1.0) { }
-	keyOff(keyNote, octave, microDist = 0) { }
+    // play a letter key (A, C#, Db ...)
+    // micronum (... -1, 0, 1 ...), 0 is normal piano note
+    keyOn(keyNote, octave, microDist = 0, velocity = 1.0) { }
+    keyOff(keyNote, octave, microDist = 0) { }
 
-	// play for a limited duration (seconds)
-	playNote(midiNote, velocity = 1.0, duration = 1.0) { }
-	playKey(keyNote, octave, microDist = 0, velocity = 1.0, duration = 1.0) { }
+    // play for a limited duration (seconds)
+    playNote(midiNote, velocity = 1.0, duration = 1.0) { }
+    playKey(keyNote, octave, microDist = 0, velocity = 1.0, duration = 1.0) { }
 
     mute() {
-		this.Volume = 0.0;
+        this.Volume = 0.0;
     }
 
     volume(val) {
@@ -147,7 +147,7 @@ export class SynthInstrument {
 }
 
 export class ToneInstrument extends SynthInstrument {
-	#audioCtx = null;
+    #audioCtx = null;
 
     #waveType = 'square';   // 'sine', 'square', 'sawtooth', 'triangle', 'custom'
     #frequency = 440.0;
@@ -167,7 +167,7 @@ export class ToneInstrument extends SynthInstrument {
     constructor(audioCtx, noteList) {
         super("Tone", noteList);
 
-		this.#audioCtx = audioCtx;
+        this.#audioCtx = audioCtx;
 
         for (let i = 0; i < super.Polyphony; i++) {
             let node = { oscillator: null, gain: null };
@@ -207,7 +207,7 @@ export class ToneInstrument extends SynthInstrument {
 
     get State() { return this.#audioCtx.state }
 
-	noteOn(midiNote, microDist = 0, velocity = 1.0) {
+    noteOn(midiNote, microDist = 0, velocity = 1.0) {
         if (this.#audioNodes.length == 0) {
             console.log('noteOn: polyphony exceeded: ' + midiNote + ' ' + microDist + ' ' + velocity);
             return null;
@@ -291,11 +291,11 @@ export class ToneInstrument extends SynthInstrument {
     microOn(microId, velocity = 1.0) { }
     microOff(microId) { }
 
-	keyOn(keyNote, octave, microDist, velocity = 1.0) { }
-	keyOff(keyNote, octave, microDist) { }
+    keyOn(keyNote, octave, microDist, velocity = 1.0) { }
+    keyOff(keyNote, octave, microDist) { }
 
-	playNote(midiNote, velocity = 1.0, duration = 1.0) { }
-	playKey(keyNote, octave, microDist, velocity = 1.0, duration = 1.0) { }
+    playNote(midiNote, velocity = 1.0, duration = 1.0) { }
+    playKey(keyNote, octave, microDist, velocity = 1.0, duration = 1.0) { }
 
     mapKey(midiNote, microDist) {
         return midiNote + "." + microDist;

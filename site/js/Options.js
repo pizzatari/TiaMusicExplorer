@@ -1,7 +1,7 @@
 export class Options {
-	constructor() {
-		this.loadDefaults();
-	}
+    constructor() {
+        this.loadDefaults();
+    }
 
     #fields = {
         TuningMethod:null,
@@ -130,7 +130,7 @@ export class Options {
         this.#fields.PrintFrequency = document.getElementById('PrintFrequencyId').checked ? true : false;
         this.#fields.ShrinkPiano = document.getElementById('ShrinkPianoId').checked ? true : false;
         this.#fields.JumpToFirst = document.getElementById('JumpToFirstId').checked ? true : false;
-	    this.#fields.Volume = parseInt(document.getElementById('VolumeId').value);
+        this.#fields.Volume = parseInt(document.getElementById('VolumeId').value);
         this.#fields.Polyphony = parseInt(document.getElementById('PolyphonyId').value);
     }
 
@@ -159,24 +159,24 @@ export class Options {
     }
 
     saveToStorage() {
-		let opts = {};
-		for (let n in this.#fields) {
-			opts[n] = this.#fields[n];
-		}
+        let opts = {};
+        for (let n in this.#fields) {
+            opts[n] = this.#fields[n];
+        }
 
         window.localStorage.setItem("Options", JSON.stringify(opts));
     }
 
     loadFromStorage() {
         let str = window.localStorage.getItem("Options");
-		if (str == null) return;
+        if (str == null) return;
 
         let opts = JSON.parse(str);
-		if (opts == null) return;
+        if (opts == null) return;
 
-		for (let n in opts) {
-			this.#fields[n] = opts[n];
-		}
+        for (let n in opts) {
+            this.#fields[n] = opts[n];
+        }
     }
 
     clearStorage() {
@@ -185,8 +185,8 @@ export class Options {
 
     toString() {
         let str = '';
-		for (let n in this.#fields)
-			str += n + '=' + this.#fields[n] + "\n";
+        for (let n in this.#fields)
+            str += n + '=' + this.#fields[n] + "\n";
         return str;
     }
 }

@@ -2,7 +2,7 @@ export class Style {
     #body = null;
 
     constructor(bodyElement) {
-		this.#body = bodyElement;
+        this.#body = bodyElement;
     }
 
     renderBackground() {
@@ -14,9 +14,9 @@ export class Style {
             let stop2 = Math.round(stop1 + 10);
             cssText += `radial-gradient(circle at top ${yPos}px left ${xPos}px, rgba(128,128,255,0.05) ${stop1}px, rgba(0,0,128,0.05) ${stop2}px),`;
         }
-		cssText += ' linear-gradient(#00f, #f00)'; 
+        cssText += ' linear-gradient(#00f, #f00)'; 
 
-		let style = { backgroundImage: cssText };
-		$(this.#body).css(style);
+        let style = { backgroundImage: cssText };
+        $(this.#body).css(style);
     }
 }

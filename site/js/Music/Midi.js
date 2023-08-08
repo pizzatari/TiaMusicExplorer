@@ -36,7 +36,7 @@ export class MidiParser {
 
     #controlsEnabled = [ MidiCC.EXPRESSION, MidiCC.SUSTAIN, MidiCC.VOLUME, MidiCC.ALESIS_VOLUME ];
 
-	constructor() { }
+    constructor() { }
 
     get IsNote() { return this.#isNote }
     get IsControl() { return this.#isControl }
@@ -64,7 +64,7 @@ export class MidiParser {
         }
     }
 
-	parse(message) {
+    parse(message) {
         let status = message[0] >> 4;
         let channel = message[0] & 0xf;
         let data1 = message[1];
@@ -124,34 +124,34 @@ export class MidiParser {
 /*
 export class Midi {
     #midiAccess = null;
-	#midiInputs = [];
-	#midiOutputs = [];
-	#statusMsgs = [];
-	#state = 'unintialized';
-	#reason = null;
+    #midiInputs = [];
+    #midiOutputs = [];
+    #statusMsgs = [];
+    #state = 'unintialized';
+    #reason = null;
 
-	#midiParser = null;
+    #midiParser = null;
 
-	get Inputs() { return this.#midiInputs }
-	get Outputs() { return this.#midiOutputs }
-	get State() { return this.#state }
-	get StatusMessages() { return this.#statusMsgs }
-	get Reason() { return this.#reason }
-	get Parser() { 
+    get Inputs() { return this.#midiInputs }
+    get Outputs() { return this.#midiOutputs }
+    get State() { return this.#state }
+    get StatusMessages() { return this.#statusMsgs }
+    get Reason() { return this.#reason }
+    get Parser() { 
 
     constructor(doneHandler = null) {
-		console.log("Midi.js: Connecting to MIDI");
+        console.log("Midi.js: Connecting to MIDI");
 
-		let midiOpts = {software:true};
+        let midiOpts = {software:true};
 
         navigator.requestMIDIAccess(midiOpts).then(
-			function(midiAccess) {
+            function(midiAccess) {
                 this.#midiAccess = midiAccess;
-				this.#state = 'connected';
-				console.log("Midi.js: Midi driver connected");
+                this.#state = 'connected';
+                console.log("Midi.js: Midi driver connected");
 
-				if (doneHandler != null)
-					doneHandler();
+                if (doneHandler != null)
+                    doneHandler();
 
 /-
                 if (this.#midiAccess.inputs.size > 0) {
@@ -174,18 +174,18 @@ export class Midi {
 
             },
             function(reason) {
-				this.#reason = reason;
-				this.#state = 'error';
+                this.#reason = reason;
+                this.#state = 'error';
                 this.#statusMsgs.push(
                     'Midi API failed to initialize. ' +
-					'It is blocked by your settings or it may be unsupported by this browser.'
+                    'It is blocked by your settings or it may be unsupported by this browser.'
                 );
 
-				if (doneHandler != null)
-					doneHandler();
+                if (doneHandler != null)
+                    doneHandler();
             }
-		);
-		console.log("Midi.js: Waiting on MIDI");
-	}
+        );
+        console.log("Midi.js: Waiting on MIDI");
+    }
 }
 */
