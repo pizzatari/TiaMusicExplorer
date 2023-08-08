@@ -72,7 +72,7 @@ export class SynthInstrument {
     #name = null;
     #volume = 1.0;
     #polyphony = 10;
-    #midiMap = new Map();    // midiNote -> Note
+    #midiMap = new Map();   // midiNum -> Note
     #keyMap = new Map();    // keyNum -> Note
 
     constructor(name, noteList) {
@@ -82,6 +82,8 @@ export class SynthInstrument {
 
     setNoteList(noteList) {
         this.disable();
+        this.#midiMap.clear();
+        this.#keyMap.clear();
         for (let note of noteList) {
             let key = this.#key(note.MidiNum, note.MicroDist);
             this.#midiMap.set(key, note);
@@ -219,16 +221,16 @@ export class ToneInstrument extends SynthInstrument {
             return null;
         }
 
+        if (note.Frequency <= 0.0) {
+            console.log('noteOn: invalid frequency: ' + midiNote + ' ' + microDist + ' ' + velocity);
+            return null;
+        }
+
         let mapKey = this.mapKey(midiNote, microDist);
         let n = this.#playing.get(mapKey);
         if (n != null) {
             console.log('noteOn: note currently playing: ' + midiNote + '.' + microDist);
             return note;
-        }
-
-        if (note.Frequency <= 0.0) {
-            console.log('noteOn: invalid frequency: ' + midiNote + ' ' + microDist + ' ' + velocity);
-            return null;
         }
 
         // logarithmic curve
@@ -259,14 +261,15 @@ export class ToneInstrument extends SynthInstrument {
         }
 
         let mapKey = this.mapKey(midiNote, microDist);
-        let node = this.#playing.get(mapKey);
-        let node2 = this.#playing2.get(mapKey);
-        let node3 = this.#playing3.get(mapKey);
 
+        let node = this.#playing.get(mapKey);
         if (node == null) {
             console.log('noteOff: note is not playing: ' + midiNote + '.' + microDist);
             return null;
         }
+
+        let node2 = this.#playing2.get(mapKey);
+        let node3 = this.#playing3.get(mapKey);
 
         node.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.0005);
         node2.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.0005);
@@ -277,12 +280,11 @@ export class ToneInstrument extends SynthInstrument {
         node3.oscillator.frequency.value = this.#frequency;
 
         this.#playing.delete(mapKey);
-        this.#audioNodes.push(node);
-
         this.#playing2.delete(mapKey);
-        this.#audioNodes2.push(node2);
-
         this.#playing3.delete(mapKey);
+
+        this.#audioNodes.push(node);
+        this.#audioNodes2.push(node2);
         this.#audioNodes3.push(node3);
 
         return this.getNote(midiNote, microDist);
