@@ -1,0 +1,3 @@
+[submodule "site/javatari.js"]
+	path = site/javatari.js
+	url = https://github.com/ppeccin/javatari.js.git
