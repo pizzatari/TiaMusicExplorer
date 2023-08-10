@@ -4,6 +4,7 @@ import { TIAScale, TIANote } from "../Scales/TIAScale.js"
 import { SynthInstrument } from "../Synth.js"
 
 export class TIAInstrument extends SynthInstrument {
+    /*
     #mode = new NTSCMode();
     #tones = [1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 14, 15];
     #allTones = Array(16).fill(0).map((e,i) => { return 15 - i });
@@ -13,7 +14,12 @@ export class TIAInstrument extends SynthInstrument {
     //  0   1    2    3  4  5   6   7    8   9  10 11 12 13  14  15
         1, 15, 465, 465, 2, 2, 31, 31, 511, 31, 31, 1, 6, 6, 93, 93
     ];
+    */
 
+    constructor(noteList) {
+    }
+
+    /*
     constructor(params = { }) {
         params.VideoFormat = params.VideoFormat == null ? 'ntsc': params.VideoFormat;
         params.Tone = params.Tone == null ? 1 : params.Tone;
@@ -65,9 +71,20 @@ export class TIAInstrument extends SynthInstrument {
         return ary;
     }
 
+    computeFrequency(tone, pitch) {
+        if (tone < 0 || tone >= 16 || pitch < 0 || pitch >= 32)
+            return 0.0;
+
+        return this.#mode.AudioFrequency / this.#divisors[tone] / (pitch+1);
+    }
+    */
+
 	// play midi note (plays nearest note by frequency)
 	noteOn(midiNote, velocity = 1.0) { }
     noteOff(midiNote) { }
+
+    allNotesOff() {
+    }
     
 	// play a letter key (A, C#, Db...)
 	keyOn(keyNote, octave, microNum, velocity = 1.0) { }
@@ -82,13 +99,6 @@ export class TIAInstrument extends SynthInstrument {
 	toneOff(control, pitch, volume) { }
 	playTone(control, pitch, volume, duration = 1.0) { }
 
-
-    computeFrequency(tone, pitch) {
-        if (tone < 0 || tone >= 16 || pitch < 0 || pitch >= 32)
-            return 0.0;
-
-        return this.#mode.AudioFrequency / this.#divisors[tone] / (pitch+1);
-    }
 }
 
 /*

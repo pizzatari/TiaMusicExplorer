@@ -2,36 +2,36 @@ import { NoteListBuilder } from  "./NoteListBuilder.js"
 import { MusicScale, MusicNote } from "./Scales/MusicScale.js"
 
 export class Synth {
+    #music = null;
+    #audioCtx = null;
     #instruments = new Map();
     #activeInstrument = null;
     #masterVolume = 1.0;
-    #audioCtx = null;
 
-    constructor(music, instrumentAry = null) {
-        this.#audioCtx = new AudioContext();
+    constructor(audioContext, music) {
+        this.#music = music;
+        this.#audioCtx = audioContext;
+        this.restart();
         console.log("Web Audio API initialized");
-
-        let noteList = NoteListBuilder.getPianoNotes(music);
-
-        let toneInstrument = new ToneInstrument(this.#audioCtx, noteList);
-        this.addInstrument(toneInstrument);
-        this.#activeInstrument = toneInstrument;
-        this.#activeInstrument.enable();
-
-        if (Array.isArray(instrumentAry)) {
-            for (const i of instrumentAry) {
-                if (i.Name != 'Tone')
-                    this.addInstrument(instrumentAry);
-            }
-        }
-
     }
 
     get ActiveInstrument() { return this.#activeInstrument }
     get MasterVolume() { return this.#masterVolume }
     get AudioContext() { return this.#audioCtx }
 
+    restart() {
+        let noteList = NoteListBuilder.getPianoNotes(this.#music);
+        let toneInstrument = new ToneInstrument(this.#audioCtx, noteList);
+        this.addInstrument(toneInstrument);
+        this.#activeInstrument = toneInstrument;
+        this.#activeInstrument.enable();
+    }
+
     addInstrument(instrument) {
+        if (this.#instruments.has(instrument.Name)) {
+            let currInstrument = this.#instruments.get(instrument.Name);
+            currInstrument.disable();
+        }
         this.#instruments.set(instrument.Name, instrument);
     }
 
@@ -128,6 +128,9 @@ export class SynthInstrument {
     // play midi note
     noteOn(midiNote, velocity = 1.0) { }
     noteOff(midiNote) { }
+
+    sustainOn() { }
+    sustainOff() { }
     
     // play a letter key (A, C#, Db ...)
     // micronum (... -1, 0, 1 ...), 0 is normal piano note
@@ -151,7 +154,7 @@ export class SynthInstrument {
 export class ToneInstrument extends SynthInstrument {
     #audioCtx = null;
 
-    #waveType = 'square';   // 'sine', 'square', 'sawtooth', 'triangle', 'custom'
+    #waveType = 'sine';   // 'sine', 'square', 'sawtooth', 'triangle', 'custom'
     #frequency = 440.0;
 
     // fundamental
@@ -166,9 +169,10 @@ export class ToneInstrument extends SynthInstrument {
     #audioNodes3 = [];      // { oscillator: node, oscillator2: node, gain: node }
     #playing3 = new Map();  // midi number -> audioNodes
 
+    #sustainedNotes = new Map();
+
     constructor(audioCtx, noteList) {
         super("Tone", noteList);
-
         this.#audioCtx = audioCtx;
 
         for (let i = 0; i < super.Polyphony; i++) {
@@ -200,7 +204,7 @@ export class ToneInstrument extends SynthInstrument {
             node3.gain.gain.setValueAtTime(0, this.#audioCtx.currentTime); // start muted
             node3.oscillator = this.#audioCtx.createOscillator();
             node3.oscillator.type = this.#waveType;
-            node3.oscillator.frequency.value = this.#frequency * 2;
+            node3.oscillator.frequency.value = this.#frequency * 3;
             node3.oscillator.connect(node3.gain);
             node3.oscillator.start();
             this.#audioNodes3.push(node3);
@@ -235,59 +239,86 @@ export class ToneInstrument extends SynthInstrument {
 
         // logarithmic curve
         let effectiveVolume = super.Volume * Math.log2(velocity+1.0);
+        let currentTime = this.#audioCtx.currentTime + 0.001; //parseInt(this.#audioCtx.currentTime*100)/100;
+        //let secsPerCycle = 1/note.Frequency/2;
 
-        let node = this.#audioNodes.pop();
-        node.oscillator.frequency.setValueAtTime(note.Frequency, this.#audioCtx.currentTime);
-        node.gain.gain.setTargetAtTime(effectiveVolume, this.#audioCtx.currentTime, 0.005);
+        let node = this.#audioNodes.shift();
+        node.oscillator.frequency.setValueAtTime(note.Frequency, currentTime);
+        node.gain.gain.setTargetAtTime(effectiveVolume, currentTime, 0.005);
         this.#playing.set(mapKey, node);
 
-        let node2 = this.#audioNodes2.pop();
-        node2.oscillator.frequency.setValueAtTime(note.Frequency * 2, this.#audioCtx.currentTime);
-        node2.gain.gain.setTargetAtTime(effectiveVolume/2, this.#audioCtx.currentTime, 0.005);
+        let node2 = this.#audioNodes2.shift();
+        node2.oscillator.frequency.setValueAtTime(note.Frequency * 3, currentTime);
+        //node2.gain.gain.setTargetAtTime(effectiveVolume/2, currentTime, 0.002);
         this.#playing2.set(mapKey, node2);
 
-        let node3 = this.#audioNodes3.pop();
-        node3.oscillator.frequency.setValueAtTime(note.Frequency * 3, this.#audioCtx.currentTime);
-        node3.gain.gain.setTargetAtTime(effectiveVolume/3, this.#audioCtx.currentTime, 0.005);
+        let node3 = this.#audioNodes3.shift();
+        node3.oscillator.frequency.setValueAtTime(note.Frequency * 4, currentTime);
+        //node3.gain.gain.setTargetAtTime(effectiveVolume/3, currentTime, 0.001);
         this.#playing3.set(mapKey, node3);
 
         return note;
     }
 
     noteOff(midiNote, microDist = 0) {
-        if (this.#playing.size == 0) {
-            console.log('noteOff: nothing is playing: ' + midiNote + '.' + microDist);
-            return null;
-        }
-
         let mapKey = this.mapKey(midiNote, microDist);
 
         let node = this.#playing.get(mapKey);
-        if (node == null) {
-            console.log('noteOff: note is not playing: ' + midiNote + '.' + microDist);
-            return null;
+        if (node != null) {
+        	node.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.10);
+        	this.#audioNodes.push(node);
         }
 
         let node2 = this.#playing2.get(mapKey);
+        if (node2 != null) {
+        	node2.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.10);
+        	this.#audioNodes2.push(node2);
+        }
+
         let node3 = this.#playing3.get(mapKey);
-
-        node.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.0005);
-        node2.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.0005);
-        node3.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.0005);
-
-        node.oscillator.frequency.value = this.#frequency;
-        node2.oscillator.frequency.value = this.#frequency;
-        node3.oscillator.frequency.value = this.#frequency;
+        if (node3 != null) {
+        	node3.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.10);
+        	this.#audioNodes3.push(node3);
+        }
 
         this.#playing.delete(mapKey);
         this.#playing2.delete(mapKey);
         this.#playing3.delete(mapKey);
 
-        this.#audioNodes.push(node);
-        this.#audioNodes2.push(node2);
-        this.#audioNodes3.push(node3);
-
         return this.getNote(midiNote, microDist);
+    }
+
+	allNotesOff() {
+        for(let [key, node] of this.#playing) {
+			this.#audioNodes.push(node);
+			this.#playing.delete(key);
+		}
+        for(let [key, node] of this.#playing2) {
+			this.#audioNodes2.push(node);
+			this.#playing2.delete(key);
+		}
+        for(let [key, node] of this.#playing3) {
+			this.#audioNodes3.push(node);
+			this.#playing3.delete(key);
+		}
+
+		// doing it this way otherwise nodes get put back into the free list while stuck on
+		let currentTime = this.#audioCtx.currentTime;
+		for (let node of this.#audioNodes) {
+        	node.gain.gain.setTargetAtTime(0, currentTime, 0.10);
+		}
+		for (let node of this.#audioNodes2) {
+        	node.gain.gain.setTargetAtTime(0, currentTime, 0.10);
+		}
+		for (let node of this.#audioNodes3) {
+        	node.gain.gain.setTargetAtTime(0, currentTime, 0.10);
+		}
+	}
+
+    sustainOn() {
+    }
+
+    sustainOff() {
     }
 
     microOn(microId, velocity = 1.0) { }
@@ -303,3 +334,51 @@ export class ToneInstrument extends SynthInstrument {
         return midiNote + "." + microDist;
     }
 }
+        /*
+        const realAry = [1, 0, 1, 0.5, 0, 0];
+        const imagAry = [1, 0, 0, 0, 0.5, 1];
+        const real = new Float32Array(2);
+        const imag = new Float32Array(2);
+        //const ac = new AudioContext();
+        //const osc = ac.createOscillator();
+        for (let i = 0; i < realAry.length; i++) {
+            real[i] = realAry[i];
+            imag[i] = imagAry[i];
+        }
+        const wave = this.#audioCtx.createPeriodicWave(real, imag, { disableNormalization: true });
+        //osc.setPeriodicWave(wave);
+        //osc.connect(ac.destination);
+        //osc.start();
+        //osc.stop(5);
+        //*/
+
+		/*
+		function makeDistortionCurve(amount) {
+   		  	const k = typeof amount === "number" ? amount : 50;
+  		  	//const n_samples = 44100;
+  		  	const n_samples = 10000;
+  		  	const curve = new Float32Array(n_samples);
+  		  	const deg = Math.PI / 180;
+
+  		  	for (let i = 0; i < n_samples; i++) {
+				const x = (i * 2) / n_samples - 1;
+				curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+				//curve[i] = Math.random();
+  		  	}
+  		  	return curve;
+		}
+
+		function makeDistortionCurve2(amount=20) {
+    		let n_samples = 256, curve = new Float32Array(n_samples);
+    		for (let i = 0 ; i < n_samples; ++i ) {
+        		let x = i * 2 / n_samples - 1;
+        		curve[i] = (Math.PI + amount) * x / (Math.PI + amount * Math.abs(x));
+    		}
+    		return curve;
+		} 
+
+		const distortion = this.#audioCtx.createWaveShaper();
+		distortion.curve = makeDistortionCurve2();
+		//distortion.oversample = "4x";
+	 	*/
+

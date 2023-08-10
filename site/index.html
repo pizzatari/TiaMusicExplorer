@@ -63,32 +63,9 @@ body {
     opts.loadFromStorage();
     opts.writeToForm();
 
-    let music = new Music();
-    music.A4Frequency = opts.A4Frequency;
-    music.CentTranspose = opts.CentTranspose;
-    music.NumMicroTones = opts.NumMicroTones;
-    music.FrequencyPrecision = opts.FrequencyPrecision;
-    music.CentPrecision = opts.CentPrecision;
-
-    let pianoNotes = NoteListBuilder.getPianoNotes(music);
-    let tiaNotes = NoteListBuilder.getTIANotes(music);
-    let noteTable = NoteListBuilder.getNoteTable(pianoNotes, tiaNotes);
-
-    let elems = {
-        body: $('body'),
-        horizPiano: $('#PianoRoll'),
-        vertPiano: $('#PianoTab')
-    };
-    let pageUI = new PageUI(opts, elems);
-    pageUI.updateNoteTables(noteTable);
-
-    let pageController = new PageController(opts, pageUI);
-
-    let synth = new Synth(music);
-    //let params = {};
-    //synth.addInstrument(new PianoInstrument(params));
-    //synth.addInstrument(new TIAInstrument(params));
-    //synth.enable(opts.Instrument);
+    let pageController = new PageController(opts);
+    let synth = new Synth(new AudioContext(), pageController.Music);
+	let pageUI = pageController.PageUI;
 
     if (synth.AudioContext.state == 'running') {
         pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
@@ -125,6 +102,68 @@ body {
         }
     );
 
+/*
+let audioCtx = new AudioContext();
+
+let fundamental = audioCtx.createOscillator();
+let overtone1 = audioCtx.createOscillator();
+let overtone2 = audioCtx.createOscillator();
+let overtone3 = audioCtx.createOscillator();
+
+let overtone1Gain = audioCtx.createGain();
+let overtone2Gain = audioCtx.createGain();
+let overtone3Gain = audioCtx.createGain();
+let masterGain = audioCtx.createGain();
+
+fundamental.frequency.value = 440;
+overtone1.frequency.value = 880;
+overtone2.frequency.value = 1320;
+overtone3.frequency.value = 1760;
+
+overtone1Gain.gain.value = 0.1;
+overtone2Gain.gain.value = 0.2;
+overtone3Gain.gain.value = 0.5
+masterGain.gain.value = 0.3;
+
+fundamental.connect(masterGain);
+overtone1.connect(overtone1Gain);
+overtone2.connect(overtone2Gain);
+overtone3.connect(overtone3Gain);
+overtone1Gain.connect(masterGain);
+overtone2Gain.connect(masterGain);
+overtone3Gain.connect(masterGain);
+masterGain.connect(audioCtx.destination);
+
+fundamental.start(0);
+overtone1.start(0);
+overtone2.start(0);
+overtone3.start(0);
+
+//
+const realAry = [1, 0.5, 0, 0];
+const imagAry = [0, 0, 0.5, 1];
+
+const real = new Float32Array(2);
+const imag = new Float32Array(2);
+const ac = new AudioContext();
+const osc = ac.createOscillator();
+
+for (let i = 0; i < realAry.length; i++) {
+	real[i] = realAry[i];
+	imag[i] = imagAry[i];
+}
+
+const wave = ac.createPeriodicWave(real, imag, { disableNormalization: true });
+
+osc.setPeriodicWave(wave);
+
+osc.connect(ac.destination);
+
+osc.start();
+osc.stop(5);
+
+*/
+
 </script>
 </head>
 
@@ -144,13 +183,13 @@ body {
                 <div class="panel">
                     <fieldset><legend>Atari Options</legend>
                         <div class="collapsible">
-                            <select id="VideoFormatId" name="VideoFormat" class="frm">
+                            <select id="VideoFormatId" name="VideoFormat" class="frm" required>
                             <option value="ntsc">NTSC (60 Hz)</option>
                             <option value="pal">PAL (50 Hz)</option>
                             </select>
                             <label for="VideoFormatId" title="Select the television format: NTSC 60 Hz or PAL 50 Hz">Video/Audio format</label>
 
-                            <select id="AtariTone0Id" name="AtariTone0" class="frm">
+                            <select id="AtariTone0Id" name="AtariTone0" class="frm" required>
                             <option value="0">0 or 11 (silence)</option>
                             <option value="1">1 (buzzy high pitch)</option>
                             <option value="2">2 (noisy engine)</option>
@@ -210,58 +249,63 @@ body {
                             </select>
                             <label for="TuningMethodId" title="12 tone equal temperament">Tuning method</label>
 
-                            <input type="number" id="A4FrequencyId" name="A4Frequency" value="440.0" size="8" min="1.0" class="frm">
+                            <input id="A4FrequencyId" class="frm" name="A4Frequency" type="number" value="440.0" size="8" min="1.0" required>
                             <label for="A4FrequencyId" title="Set the base frequency for the A4 key">A4 frequency (Hz)</label>
-                            <input type="range" id="A4FrequencyRangeId" name="A4FrequencyRange" value="440" min="100" max="1000" class="frm">
+                            <input id="A4FrequencyRangeId" class="frm" name="A4FrequencyRange" type="range" value="440" min="100" max="1000">
                             <br/>
 
-                            <input type="number" id="CentTransposeId" name="CentTranspose" value="0" size="5" class="frm">
+                            <input id="CentTransposeId" class="frm" name="CentTranspose" type="number" value="0" size="5" pattern="-?[0-9]+" required>
                             <label for="CentTransposeId" title="CentTranspose piano frequency up or down by this value">Transpose (cents)</label>
-                            <input type="range" id="CentTransposeRangeId" name="CentTransposeRange" value="0" min="-100" max="100" class="frm">
+                            <input id="CentTransposeRangeId" class="frm" name="CentTransposeRange" type="range" value="0" min="-100" max="100" >
                             <br/>
 
-                            <input type="number" id="NumMicroTonesId" name="NumMicroTones" value="1" size="5" min="1" class="frm">
+                            <input id="NumMicroTonesId" class="frm" name="NumMicroTones" type="number" value="1" size="5" min="1" max="11" pattern="[0-9]+" required>
                             <label for="NumMicroTonesId" title="Insert evenly spaced micro notes between piano keys">Microtones per key</label>
-                            <input type="range" id="NumMicroTonesRangeId" name="NumMicroTonesRange" value="1" min="1" max="11" class="frm">
+                            <input id="NumMicroTonesRangeId" class="frm" name="NumMicroTonesRange" type="range" value="1" min="1" max="11">
                             <br/>
 
-                            <input type="number" id="TuningSensitivityId" name="TuningSensitivity" value="50" size="8" min="0" max="50" class="frm">
+                            <input id="TuningSensitivityId" class="frm" name="TuningSensitivity" type="number" value="50" size="8" min="0" max="50" pattern="[0-9]+" required>
                             <label for="TuningSensitivityId" title="Exclude notes outside this threshold">Tuning Threshold (cents)</label>
-                            <input type="range" id="TuningSensitivityRangeId" name="TuningSensitivityRange" value="50" min="0" max="50" class="frm">
+                            <input id="TuningSensitivityRangeId" class="frm" name="TuningSensitivityRange" type="range" value="50" min="0" max="50" >
                         </div>
                     </fieldset>
 
-                    <fieldset><legend>Result Options</legend>
+                    <fieldset class="result"><legend>Result Options</legend>
                         <div class="collapsible">
-                            <input type="checkbox" id="TuningGradientId" name="TuningGradientId" value="Yes" class="frm" checked>
-                            <label for="TuningGradientId" title="Show cent deviation as a color gradient">Gradient</label>
-                            <input type="checkbox" id="PrintBlackKeysId" name="PrintBlackKeys" value="Yes" class="frm">
-                            <label for="PrintBlackKeysId" title="Print black keys as table rows"><span style="font-size:125%;">&sharp;&flat;</span> as rows</label>
+                            <input type="checkbox" id="TuningGradientId" class="frm group1" name="TuningGradientId" value="Yes" checked>
+                            <label for="TuningGradientId" class="group1" title="Show cent deviation as a color gradient">Gradient</label>
+
+                            <input type="checkbox" id="PrintBlackKeysId" class="frm group1" name="PrintBlackKeys" value="Yes">
+                            <label for="PrintBlackKeysId" class="group1" title="Print black keys as table rows"><span style="font-size:125%;">&sharp;&flat;</span> as rows</label>
+
                             <!--
                             <input type="checkbox" id="ShowBlackKeysId" name="ShowBlackKeys" value="Yes" class="frm">
                             <label for="ShowBlackKeysId" title="Show black keys as table rows"><span style="font-size:125%;">&sharp;&flat;</span> black keys</label>
                             -->
-                            <input type="checkbox" id="PrintGeometryId" name="PrintGeometry" value="Yes" class="frm" checked disabled>
-                            <label for="PrintGeometryId">Geometry</label>
+
+                            <input type="checkbox" id="PrintGeometryId" class="frm group1" name="PrintGeometry" value="Yes" checked disabled>
+                            <label for="PrintGeometryId" class="group1">Geometry</label>
 
                             <br/>
 
-                            <input type="checkbox" id="PrintFrequencyId" name="PrintFrequency" value="Yes" class="frm" checked>
-                            <label for="PrintFrequencyId" title="Show frequency values">Freq. </label>
+                            <input type="checkbox" id="PrintFrequencyId" class="frm group2" name="PrintFrequency" value="Yes" checked>
+                            <label for="PrintFrequencyId" class="group2" title="Show frequency values">Freq. </label>
                             <!--
                             <input type="checkbox" id="InnerJoinId" name="InnerJoinId" value="Yes" checked>
                             <label for="InnerJoinId">Inner join</label>
                             <input type="checkbox" id="ExpandPianoId" name="ExpandPiano" value="Yes" class="frm">
                             <label for="ExpandPianoId" title="Expand piano to include out of range Atari notes">Expand</label>
                             -->
-                            <input type="checkbox" id="ShrinkPianoId" name="ShrinkPiano" value="Yes" class="frm">
-                            <label for="ShrinkPianoId" title="Shrink piano to fit to Atari note range">Shrink</label>
-                            <input type="checkbox" id="JumpToFirstId" name="JumpToFirst" value="Yes" class="frm">
-                            <label for="JumpToFirstId" title="Scroll to the first Atari note">Scroll</label>
+                            <input type="checkbox" id="ShrinkPianoId" class="frm group2" name="ShrinkPiano" value="Yes">
+                            <label for="ShrinkPianoId" class="group2" title="Shrink piano to fit to Atari note range">Shrink</label>
+
+                            <input type="checkbox" id="JumpToFirstId" class="frm group2" name="JumpToFirst" value="Yes">
+                            <label for="JumpToFirstId" class="group" title="Scroll to the first Atari note">Scroll</label>
+
                             <select id="CentTypeId" class="frm" style="width:75px" disabled>
-                            <option value="A">All</option>
-                            <option value="P">Positive</option>
-                            <option value="N">Negative</option>
+                            	<option value="A">All</option>
+                            	<option value="P">Positive</option>
+                            	<option value="N">Negative</option>
                             </select>
                             <label for="CentTypeId" title="Filter notes with positive or negative cents">Cent Filter</label>
 
@@ -328,10 +372,10 @@ body {
     -->
 
                             <input type="range" id="VolumeId" name="Volume" value="64" min="0" max="127" class="frm">
-                            <legend for="VolumeId2">Volume -/+</legend>
+                            <label for="VolumeId2">Volume -/+</label>
                             <br/>
 
-                            <p>Midi Inputs (listening to all devices &amp; channels)</p>
+                            <label>Midi Inputs (listening to all devices &amp; channels)</label>
                             <select id="MidiInputDeviceId" name="MidiInputDevice" class="frm highlight-alert" style="width:220px" multiple="multiple">
                             <option value="">(none detected)</option>
                             </select>
@@ -339,7 +383,7 @@ body {
                             <br/>
 
                             <div style="display:none">
-                                <p>Midi outputs</p>
+                                <label>Midi outputs</label>
                                 <select id="MidiOutputDeviceId" name="MidiOutputDevice" class="frm" style="width:220px" multiple="multiple">
                                 <option value="">(none detected)</option>
                                 </select>
@@ -355,13 +399,13 @@ body {
                             <br/>
                             <br/>
 
-                            <p>MIDI may not be enabled by default. Try approving permissions or using another browser.<br/><br/>
-                            Sustain requires a MIDI sustain pedal or sustain button.<br/><br/>
-                            If devices don't update after insertion/removal, press Re-Scan or restart the browser. There may
-                            be a several second delay.<br/><br/>
-                            Keep this page open only once otherwise multiple instances will compete for the devices.<br/><br/>
-                            Sine and triangle wave forms may be inaudible for low octave keys.
-                            </p>
+							<ul><li>MIDI may not be enabled by default. Try approving permissions or using another browser.</li>
+                            	<li>Sustain requires a MIDI sustain pedal or sustain button.</li>
+                            	<li>If devices don't update after insertion/removal, press Re-Scan or restart the browser. There may
+                            	    be a several second delay.</li>
+                            	<li>Keep this page open only once otherwise multiple instances will compete for the devices.</li>
+                            	</li>Sine and triangle wave forms may be inaudible for low octave keys.</li>
+                            </ul>
 
                             <!--
                             <p>If you do not have a physical MIDI keyboard, try loopMIDI and VMPK (Virtual MIDI Piano Keyboard) for a virtual solution.<br/><br/>
@@ -575,8 +619,8 @@ title="Same as above, but as absolute value."></canvas>
     </section>
 </main>
 
-<!-- script src="javatari.js/release/stable/5.0/embedded/javatari.js"></script -->
-<!-- script>Javatari.CARTRIDGE_URL = "atari2600/NTSC.bin"</script -->
+<script src="javatari.js/release/stable/5.0/embedded/javatari.js"></script>
+<script>Javatari.CARTRIDGE_URL = "atari2600/NTSC.bin"</script>
 
 <div id="dialog" title="Basic dialog">
       <p>This is the default dialog which is useful for displaying information. The dialog window can be moved, resized and closed with the &apos;x&apos; icon.</p>

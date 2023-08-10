@@ -2,18 +2,18 @@ import { Music } from "./Music.js";
 import { MusicScale, MusicNote } from "./Scales/MusicScale.js";
 import { TIAScale, TIANote } from "./Scales/TIAScale.js";
 
-// binds a note to a list of similar notes
+// maps a key note to a group of similar notes
 export class NoteGroup {
-    #note = null;
+    #keyNote = null;
     #noteList = [];
 
-    constructor(note) {
-        this.#note = note;
+    constructor(keyNote) {
+        this.#keyNote = keyNote;
     }
 
+    get KeyNote() { return this.#keyNote }
     get NoteList() { return this.#noteList }
-
-    getBestNote(note) {
+    get BestNote() {
         if (this.#noteList.length > 0)
             return this.#noteList[0];
         return null;
@@ -21,12 +21,21 @@ export class NoteGroup {
 
     addNote(note) {
         this.#noteList.push(note);
-        // TODO: maintain sorted order
+        this.sort();
     }
 
     addNoteList(noteList) {
         this.#noteList = this.#noteList.concat(noteList);
-        // TODO: maintain sorted order
+        this.sort();
+    }
+
+    sort() {
+        this.#noteList.sort((a,b) => {
+            let c = a.Frequency - b.Frequency;
+            if (c != 0)
+                return c;
+            return Math.abs(a.Cents) - Math.abs(b.Cents);
+        });
     }
 }
 
@@ -72,7 +81,51 @@ export class NoteTable extends Map {
             if (note.MicroId > this.#noteBounds.lastMicroId)
                 this.#noteBounds.lastMicroId = note.MicroId;
         }
+        return noteList;
     }
+
+    getFlattenedTable() {
+		let ary = [];
+
+        for (let [key, group] of this) {
+			let keyNote = group.KeyNote;
+			let note = group.BestNote;
+
+            let row = {
+				MicroId: keyNote.MicroId,
+				KeyNum: keyNote.KeyNum,
+				MidiNum: keyNote.MidiNum,
+				MicroDist: keyNote.MicroDist,
+				Octave: keyNote.Octave,
+
+				Key: keyNote.Key,
+				KeyUp: keyNote.KeyUp,
+				KeyDown: keyNote.KeyDown,
+                FlatKey: keyNote.FlatKey,
+                SharpKey: keyNote.SharpKey,
+                SharpNote: keyNote.getSharpNote(),
+
+                IsWhite: keyNote.IsWhite,
+                IsBlack: keyNote.IsBlack,
+                Label: keyNote.Label,
+
+            	Frequency: keyNote.Frequency,
+            	FrequencyRounded: keyNote.getFrequencyRounded(),
+
+            	TIAFrequency: note != null ? note.Frequency : '',
+            	TIAFrequencyRounded: note != null ? note.getFrequencyRounded() : '',
+				AUDC: note != null ? note.AUDC : '',
+				AUDF: note != null ? note.AUDF : '',
+				Cents: note != null ? note.Cents : '',
+				CentsRounded: note != null ? note.getCentsRounded() : '',
+				TIALabel: note != null ? note.AUDC + '/' + note.AUDF : ''
+			};
+            ary.push(row);
+        }
+
+        return ary;
+    }
+
 }
 
 export class NoteListBuilder {
@@ -81,8 +134,8 @@ export class NoteListBuilder {
         return scale.getNoteList();
     }
 
-    static getTIANotes(music) {
-        let scale = new TIAScale(music);
+    static getTIANotes(music, args) {
+        let scale = new TIAScale(music, args);
         return scale.getNoteList();
     }
 

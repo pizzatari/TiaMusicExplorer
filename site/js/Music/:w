@@ -24,9 +24,8 @@ const ScaleUpKeys    = [ 'A', 'A#', 'B', 'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', '
 
 // white = (N % 12) in (1, 3, 4, 6, 8, 9, 11)
 // black = (N % 12) in (0, 2, 5, 7, 10)
-const WhiteKeys = [ true, false, true, true, false, true, false, true, true, false, true, false ];
-/* const WhiteKeys = { 0:false, 1:true,  2:false, 3:true,  4:true,  5:false,
-                       6:true,  7:false, 8:true,  9:true, 10:false, 11:true }; */
+const WhiteKeys    = { 0:false, 1:true,  2:false, 3:true,  4:true,  5:false,
+                       6:true,  7:false, 8:true,  9:true, 10:false, 11:true };
 
 /* Formulas used in this file:
 
@@ -227,9 +226,9 @@ export class Music extends EventTarget {
     // returns the letter for a key number. black keys include both flat and sharp letters
     // A, Bb/A#, B, C, Db/C#...
     static KeyNumToKey(keyNum) {
-        //let idx = (keyNum+11) % 12; // subtract 1 but avoid negative numbers, so +12-1
-        let idx = Music.Modulo(keyNum-1, 12);
+        let idx = (keyNum+11) % 12; // subtract 1 but avoid negative numbers, so +12-1
         let letter = ScaleUpKeys[idx];
+
         return Music.KeyNumIsWhite(keyNum) ? letter : ScaleDownKeys[idx] + '/' + letter;
     }
 
@@ -240,7 +239,11 @@ export class Music extends EventTarget {
     // direction = true is moving up the scale, false is moving down
     static KeyNumToScaleKey(keyNum, direction = true) {
         //let idx = (keyNum+11) % 12;
-        let idx = Music.Modulo(keyNum-1, 12);
+
+        // modulo 12 with handling negative numbers
+        let idx = (keyNum - Math.floor(keyNum / 12) * 12);
+
+        console.log(`keynum ${keyNum} = ${ScaleDownKeys[idx]} ${ScaleUpKeys[idx]}`);
         return direction ? ScaleUpKeys[idx] : ScaleDownKeys[idx];
     }
 
@@ -248,26 +251,30 @@ export class Music extends EventTarget {
     // Ab, Bb, Db, Eb, Gb...
     static KeyNumToFlatKey(keyNum) {
         //let num = (keyNum+11) % 12;
-        let idx = Music.Modulo(keyNum-2, 12);
-        return Music.KeyNumIsBlack(keyNum-1) ? ScaleDownKeys[idx] : '';
+
+        keyNum--;
+        let idx = (keyNum - Math.floor(keyNum / 12) * 12);
+        console.log(`keynum ${keyNum} = ${ScaleDownKeys[idx]} ${ScaleUpKeys[idx]}`);
+        return Music.KeyNumIsBlack(idx) ? ScaleDownKeys[idx] : '';
     }
 
     // returns the sharp letter of black keys. blank is returned for white keys.
     // A#, C#, D#, F#, G#...
     static KeyNumToSharpKey(keyNum) {
         //let num = (keyNum+1) % 12;
-        let idx = Music.Modulo(keyNum, 12);
-        return Music.KeyNumIsBlack(keyNum+1) ? ScaleUpKeys[idx] : '';
+
+        keyNum++;
+        let idx = (keyNum - Math.floor(keyNum / 12) * 12);
+        console.log(`keynum ${keyNum} = ${ScaleDownKeys[idx]} ${ScaleUpKeys[idx]}`);
+        return Music.KeyNumIsBlack(idx) ? ScaleUpKeys[idx] : '';
     }
 
     static KeyNumIsWhite(keyNum) {
-        let idx = Music.Modulo(keyNum-1, 12);
-        return WhiteKeys[idx];
+        return WhiteKeys[keyNum % 12];
     }
 
     static KeyNumIsBlack(keyNum) {
-        let idx = Music.Modulo(keyNum-1, 12);
-        return !WhiteKeys[idx];
+        return !WhiteKeys[keyNum % 12];
     }
 
     // replace ASCII notation with HTML entity
@@ -288,11 +295,6 @@ export class Music extends EventTarget {
 
     static Round(num, precision) {
         return Math.round(num * (10**precision)) / (10**precision);
-    }
-
-    // handle negative numbers
-    static Modulo(num, modulus) {
-        return num - (Math.floor(num / modulus) * modulus);
     }
 
     // serializes this object's values to a delimited string. optionally appends additional values to the end.

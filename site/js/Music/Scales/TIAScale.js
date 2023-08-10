@@ -40,52 +40,105 @@ export class PALMode {
     get AudioFrequency () { return this.#audioFrequency }
 }
 
-export class TIANote extends MusicNote {
-	#pitch = 0;
-	#tone = 0;
-	#cents = 0.0;
-    #pianoNote = null;
+const ModeMap = {
+    'ntsc': new NTSCMode(),
+    'pal': new PALMode()
+};
 
-    constructor(frequency, pitch, tone) {
-        super(frequency);
-        this.#pitch = pitch;
-        this.#tone = tone;
-        this.#pianoNote = Music.getNearestNote(frequency);
-        this.#cents = Music.Cents(this.#pianoNote.Frequency, frequency);
+const Divisors = [
+//     AUDC control value (0 and 11 are silent)
+//  0   1    2    3  4  5   6   7    8   9  10 11 12 13  14  15
+    1, 15, 465, 465, 2, 2, 31, 31, 511, 31, 31, 1, 6, 6, 93, 93
+];
+
+export class TIANote extends MusicNote {
+	#mode = null;
+	#audc = 0;
+	#audf = 0;
+	#frequency = 0.0;
+	#cents = 0.0;
+
+    #tones = [1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 14, 15];
+    #allTones = Array(16).fill(0).map((e,i) => { return 15 - i });
+    #allPitches = Array(32).fill(0).map((e,i) => { return 31 - i });
+
+    constructor(music, args) {
+        if (args.audc < 0 || args.audc >= 16)
+            args.audc = 0;
+ 		if (args.audf < 0 || args.audf >= 32)
+			args.audf = 0;
+
+        let tiaFrequency = ModeMap.ntsc.AudioFrequency / Divisors[args.audc] / (args.audf+1);
+		let mArgs = { frequency: tiaFrequency};
+
+        super(music, mArgs);
+
+		this.#mode = args.mode;
+        this.#audc = args.audc;
+        this.#audf = args.audf;
+		this.#frequency = tiaFrequency;
+        this.#cents = Music.CentsBetween(super.Frequency, tiaFrequency);
     }
+
+	get AUDC() { return this.#audc }
+	get AUDF() { return this.#audf }
+	get TIAFrequency() { return this.#frequency }
+	get Cents() { return this.#cents }
+    get TIALabel() { return "" + this.AUDC + "/" + this.AUDF; }
+
+    getTIAFrequencyRounded(precision = null) {
+        if (precision === null)
+            return Music.Round(this.#frequency, super.Music.FrequencyPrecision);
+
+        return Music.Round(this.#frequency, parseInt(precision));
+    }
+
+	getCentsRounded(precision = null) {
+        if (precision === null)
+            return Music.Round(this.#cents, super.Music.FrequencyPrecision);
+
+        return Music.Round(this.#cents, parseInt(precision));
+	}
 
     clone() {
-        return new TIANote(this.Frequency, this.Pitch, this.Tone);
+		let args = { mode: this.#mode, audc: this.AUDC, audf: this.AUDF };
+        return new TIANote(super.Music, args);
     }
 
-    get Label() {
-        return "" + this.Tone + "/" + this.Pitch;
+    computeFrequency(audc, audf) {
+        if (audc < 0 || audc >= 16 || audf < 0 || audf >= 32)
+            return 0.0;
+
+        return this.#mode.AudioFrequency / Divisors[audc] / (audf+1);
     }
-
-	get Pitch() { return this.#pitch }
-	get Tone() { return this.#tone }
-	get Cents() { return this.#cents }
-    get NearestPianoNote() { return this.#pianoNote }
-
-	get KeyNum() { return this.#pianoNote.KeyNum }
-    get MicroNum() { return this.#pianoNote.MicroNum }
-    get Letter() { return this.#pianoNote.Letter }
-
-	set Cents(val) { this.#cents = val }
-
-    // old fields
-    get microId() { return this.MicroId }
-	get pitch() { return this.Pitch }
-	get tone() { return this.Tone }
-	get frequency() { return this.Frequency }
-	get cents() { return this.Cents }
-
-    get midiNote() { return this.MidiNote }
-    get keyNum() { return this.KeyNum }
-    get microNum() { return this.MicroNum }
-
-	set cents(val) { this.Cents = val }
 }
 
 export class TIAScale extends MusicScale {
+	#mode = ModeMap.ntsc;
+	#audc = 0;
+
+    constructor(music, args) {
+        super(music);
+		this.#audc = args.audc;
+		if (args.mode != '')
+			this.setModeByString(args.mode);
+    }
+
+	get VideoMode() { return this.#mode };
+	get AUDC() { return this.#audc }
+
+    setModeByString(str) {
+        if (typeof ModeMap[str] != 'undefined')
+            this.#mode = ModeMap[str];
+	}
+
+    getNoteList() {
+        let ary = [];
+        for (let audf = 31; audf >= 0; audf--) {
+			let args = { 'mode': this.#mode, 'audc': this.AUDC, 'audf': audf };
+            let note = new TIANote(super.Music, args);
+            ary.push(note);
+        }
+        return ary;
+    }
 }

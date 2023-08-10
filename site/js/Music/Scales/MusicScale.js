@@ -91,14 +91,14 @@ export class MusicNote {
         this.#music = music;
 
 		if (typeof args.frequency != 'undefined') {
-            this.#frequency = frequency;
+            this.#microId = this.#music.FrequencyToMicroId(args.frequency);
+            this.#midiNum = this.#music.FrequencyToMidiNum(args.frequency);
+            this.#microDist = this.#music.FrequencyToMicroDist(args.frequency);
+			this.#keyNum = this.#music.FrequencyToKeyNum(args.frequency);
+			this.#key = Music.KeyNumToKey(this.#keyNum);
 
-            this.#microId = this.#music.FrequencyToMicroId(this.#frequency);
-            this.#midiNum = this.#music.FrequencyToMidiNum(this.#frequency);
-            this.#microDist = this.#music.FrequencyToMicroDist(this.#frequency);
-			this.#keyNum = this.#music.FrequencyToKeyNum(this.#frequency);
-
-			this.#key = this.#music.KeyNumToKey(this.#keyNum);
+            // calculate tuned piano frequency. args.frequency may be detuned.
+            this.#frequency = this.#music.MicroFrequency(this.#keyNum, this.#microDist);
 
 		} else if (typeof args.keyNum != 'undefined' && typeof args.microDist != 'undefined') {
         	this.#keyNum = args.keyNum;
@@ -136,6 +136,8 @@ export class MusicNote {
         //this.#sharpNote = (typeof args.sharpNote != 'undefined' ? targs.sharpNote : null);
     }
 
+    get Music() { return this.#music }
+
     get MicroId() { return this.#microId }		// uniquely identifying number (unique by micro number)
     get MidiNum() { return this.#midiNum }		// midi key number: 21-108 (for piano)
     get MicroDist() { return this.#microDist }	// micro distance from piano key: ...-2, -1, 0 (piano key), +1, +2...
@@ -151,7 +153,7 @@ export class MusicNote {
     get IsBlack() { return !this.#isWhite }
     get FlatKey() { return Music.KeyNumToFlatKey(this.#keyNum) }			// letter of black key 1 semitone down; blank if none
     get SharpKey() { return Music.KeyNumToSharpKey(this.#keyNum) }			// letter of black key 1 semitone up; blank if none
-    get Label() { return this.#key + this.#octave + "." + this.#microId }	// label for display
+    get Label() { return this.#key + '<sub>' + this.#octave + '.' + this.#microDist  + '</sub>'}	// label for display
     
     // returns previous black flat note if it exists
     getFlatNote() {
@@ -168,25 +170,11 @@ export class MusicNote {
     }
 
     // returns rounded frequency
-    getFrequency(precision = null) {
+    getFrequencyRounded(precision = null) {
         if (precision === null)
             return Music.Round(this.#frequency, this.#music.FrequencyPrecision);
 
         return Music.Round(this.#frequency, parseInt(precision));
-    }
-
-    centsBetween(toNote) {
-        return this.#music.CentsBetween(this.Frequency, toNote.Frequency);
-    }
-
-    // returns rounded cents
-    getCentsBetween(toNote, precision = null) {
-        let cents = this.centsBetween(toNote);
-
-        if (precision === null)
-            return Music.Round(cents, this.#music.CentPrecision);
-
-        return Music.Round(cents, parseInt(precision));
     }
 
     clone(note) {
@@ -202,6 +190,8 @@ export class MusicScale {
     #lastOctave = 8;
     #firstKeyNum = 1;
     #lastKeyNum = 88;
+
+    get Music() { return this.#music }
 
     get FirstOctave() { return this.#firstOctave }
     set FirstOctave(num) { this.#firstOctave = num }
@@ -231,17 +221,6 @@ export class MusicScale {
         for(let keyNum = this.FirstKeyNum; keyNum <= this.LastKeyNum; keyNum++) {
             for(let dist = startDistance; dist <= endDistance; ++dist) {
                 let args = { keyNum: keyNum, microDist: dist };
-                /*
-                let fkey = Music.KeyNumToFlatKey(keyNum);
-                let skey = Music.KeyNumToSharpKey(keyNum);
-
-                if (fkey != '')
-                    args[flatNote] = new MusicNote(this.#music, { keyNum: fkey, microDist: 0 });
-
-                if (skey != '')
-                    args[sharpNote] = new MusicNote(this.#music, { keyNum: skey, microDist: 0 });
-                */
-
                 let note = new MusicNote(this.#music, args);
                 ary.push(note);
             }

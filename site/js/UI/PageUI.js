@@ -4,10 +4,18 @@ export class PageUI {
     #opts = null;
     #elems = null;
 
-    // elems = { horizPiano: htmlElement, vertPiano: htmlElement }
-    constructor(opts, elems) {
+    constructor(opts) {
         this.#opts = opts;
-        this.#elems = elems;
+    	this.#elems = {
+        	body: $('body'),
+        	horizPiano: $('#PianoRoll'),
+        	vertPiano: $('#PianoTab')
+    	};
+    }
+
+    set MasterVolume(val) {
+		let volume = document.querySelector('#VolumeId');
+        volume.value = val;
     }
 
     get VerticalKeys() {
@@ -72,6 +80,9 @@ export class PageUI {
     #getHorizontalPiano(noteList) {
         let html = '<div id="HorizontalKeys" class="piano">';
         for(const note of noteList) {
+			if (note.MicroDist != 0)
+				continue;
+
             let midiNum = 'MicroDist="' + note.MicroDist + '"';
             let microDist = 'MidiNum="' + note.MidiNum + '"';
             let keyId = 'h_' + note.MidiNum + '_' + note.MicroDist;
@@ -90,63 +101,94 @@ export class PageUI {
     }
 
     #getVerticalPiano(noteTable) {
-        let html = 
-            '<table id="VerticalKeys" class="piano">' + 
-            '<tr>' + 
-            '<th title="Piano Key">Key</th>' + 
-            '<th title="Piano frequence">Freq</th>' + 
-            '<th title="Atari Tone (AUDC)">Tone</th>' + 
-            '<th title="Tone Frequency">Freq</th>' + 
-            '<th title="Tuning difference between piano note and Atari note.">Cents</th>' + 
-            '<th title="Piano key number">Key#</th>' + 
-            '<th title="Microtonal number">Micro#</th>' + 
-            '</tr>';
-
         let bounds = noteTable.NoteBounds;
+		let table = noteTable.getFlattenedTable(); 
 
-        for(const [microId, noteGroup] of noteTable) {
-            let pivotNote = noteGroup.getBestNote();
-            let note = pivotNote; // TODO: make this TIANote
-            let keyId = 'v_' + note.MidiNum + '_' + note.MicroDist;
-
-            if (pivotNote.IsBlack && this.#opts.PrintBlackKeys) {
-                html += '<tr class="black">';
-                html += '<td>' + '<span id="' + keyId + '" class="black">' + pivotNote.KeyUp + ' ' + pivotNote.KeyDown + '</span></td>';
-                html += '<td title="' + pivotNote.Frequency + ' Hz">' + pivotNote.getFrequency() + '</td>';
-                html += '<td>' + note.Key + '</td>';
-                html += '<td title="' + note.Frequency + ' Hz">' + note.getFrequency() + '</td>';
-                html += '<td>' + note.getCentsBetween(pivotNote) + '</td>';
-                html += '<td>' + note.KeyNum + '</td>';
-                html += '<td>' + note.MicroId + '</td>';
-                html += '</tr>';
-
-            } else if (pivotNote.IsWhite) {
-                let blackHtml = '';
-                if (!this.#opts.PrintBlackKeys) {
-                    let sharpNote = pivotNote.getSharpNote();
-                    if (sharpNote != null) {
-                        let id = 'v_' + sharpNote.MidiNum + '_' + sharpNote.MicroDist;
-                        if (sharpNote.MicroId >= bounds.firstMicroId && sharpNote.MicroId <= bounds.lastMicroId) {
-                            blackHtml = '<span id="' + id + '" class="black" MidiNum="' + sharpNote.MidiNum + '" MicroDist="' + sharpNote.MicroDist + '">' + sharpNote.KeyUp + ' ' + sharpNote.KeyDown + '</span>';
-                        }
-                    }
-                }
-
-                let whiteHtml = '<span id="' + keyId + '" class="white" MidiNum="' + pivotNote.MidiNum + '" MicroDist="' + pivotNote.MicroDist + '">' + pivotNote.Key + pivotNote.Octave + '</span>';
-
-                html += '<tr class="white">';
-                html += '<td>' + whiteHtml + blackHtml + '</td>';
-                html += '<td title="' + pivotNote.Frequency + ' Hz">' + pivotNote.getFrequency() + '</td>';
-                html += '<td>' + note.Key + '</td>';
-                html += '<td title="' + note.Frequency + ' Hz">' + note.getFrequency() + '</td>';
-                html += '<td>' + note.getCentsBetween(pivotNote) + '</td>';
-                html += '<td>' + note.KeyNum + '</td>';
-                html += '<td>' + note.MicroId + '</td>';
-                html += '</tr>';
-            }
+        let html = this.#VTableTop();
+        for(let row of table) {
+            if (this.#opts.PrintBlackKeys) {
+				html += this.#VTableSingleRow(row);
+            } else if (row.IsWhite) {
+				html += this.#VTableDoubleRow(row);
+			}
         }
-
-        html += '</table>';
+        html += this.#VTableBottom();
         return html;
     }
+
+	// table printing
+	#VTableTop() {
+		return `
+<table id="VerticalKeys" class="piano">
+<tr>
+	<th title="Piano Key">Key</th>
+	<th title="Piano frequence">Freq</th>
+	<th title="Atari Tone (AUDC)">Tone</th>
+	<th title="Tone Frequency">Freq</th>
+	<th title="Tuning difference between piano note and Atari note.">Cents</th>
+	<th title="Piano key number">Key#</th>
+	<th title="Microtonal number">Micro#</th>
+</tr>`;
+	}
+
+	#VTableBottom() {
+		return '</table>';
+	}
+
+	#VTableDoubleRow(row) {
+		if (row.IsBlack)
+			return '';
+
+if (row.Key == 'C')
+	console.log("key C");
+
+		let micro = (this.#opts.NumMicroTones > 1 ? '.' + row.MicroDist : '');
+        let midiNum = 'MicroDist="' + row.MicroDist + '"';
+        let microDist = 'MidiNum="' + row.MidiNum + '"';
+    	let keyId = 'v_' + row.MidiNum + '_' + row.MicroDist;
+
+		let whiteKey = '<span id="' + keyId + '" class="white" ' + midiNum + ' ' + microDist + '>' + row.Key + '<sub>' + row.Octave + micro + '</sub></span>';
+		let blackKey = '';
+
+		if (row.SharpNote != null) {
+    		let bKeyId = 'v_' + row.SharpNote.MidiNum + '_' + row.SharpNote.MicroDist;
+        	let bMidiNum = 'MicroDist="' + row.SharpNote.MicroDist + '"';
+        	let bMicroDist = 'MidiNum="' + row.SharpNote.MidiNum + '"';
+			blackKey = '<span id="' + bKeyId + '" class="black" ' + bMidiNum + ' ' + bMicroDist + '>' + row.SharpNote.KeyUp + ' ' + row.SharpNote.KeyDown + '</span>';
+		}
+
+		return `
+<tr class="double">
+<td>${whiteKey}${blackKey}</td>
+<td title="${row.Frequency} Hz">${row.FrequencyRounded}</td>
+<td>${row.TIALabel}</td>
+<td title="${row.TIAFrequency} Hz">${row.TIAFrequencyRounded}</td>
+<td title="${row.Cents}">${row.CentsRounded}</td>
+<td>${row.KeyNum}</td>
+<td>${row.MicroId}</td>
+</tr>`;
+	};
+
+	#VTableSingleRow(row) {
+		let micro = (this.#opts.NumMicroTones > 1 ? '.' + row.MicroDist : '');
+		let className = row.IsWhite ? 'white' : 'black';
+    	let keyId = 'v_' + row.MidiNum + '_' + row.MicroDist;
+		let keyHtml = '';
+
+		if (row.IsWhite)
+			keyHtml = '<span id="' + keyId + '" class="white">' + row.Key + '<sub>' + row.Octave + micro + '</sub></span>';
+		else
+			keyHtml = '<span id="' + keyId + '" class="black">' + row.KeyUp + ' ' + row.KeyDown + ' <sub>' + row.Octave + micro + '</sub></span>';
+
+		return `
+<tr class="single">
+<td>${keyHtml}</td>
+<td title="${row.Frequency} Hz">${row.FrequencyRounded}</td>
+<td>${row.TIALabel}</td>
+<td title="${row.TIAFrequency} Hz">${row.TIAFrequencyRounded}</td>
+<td title="${row.Cents}">${row.CentsRounded}</td>
+<td>${row.KeyNum}</td>
+<td>${row.MicroId}</td>
+</tr>`;
+	}
 }

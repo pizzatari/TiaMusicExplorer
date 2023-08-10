@@ -1,33 +1,14 @@
 export class Options {
+    #fields = {
+/* TuningMethod:null, A4Frequency:null, TuningSensitivity:null, TuningGradient:null, CentTranspose:null, NumMicroTones:null,
+   AtariTones:new Array(), VideoFormat:null, PrintBlackKeys:null, PrintGeometry:null, PrintFrequency:null, ExpandPiano:null,
+   ShrinkPiano:null, JumpToFirst:null, InnerJoin:null, EnableSound:null, Volume:null, Polyphony:null, FrequencyPrecision:null,
+   CentPrecision:null, FirstPianoKey:null, LastPianoKey:null, FirstPianoOctave:null */
+    };
+
     constructor() {
         this.loadDefaults();
     }
-
-    #fields = {
-        TuningMethod:null,
-        A4Frequency:null,
-        TuningSensitivity:null,
-        TuningGradient:null,
-        CentTranspose:null,
-        NumMicroTones:null,
-        AtariTones:new Array(),
-        VideoFormat:null,
-        PrintBlackKeys:null,
-        PrintGeometry:null,
-        PrintFrequency:null,
-        ExpandPiano:null,
-        ShrinkPiano:null,
-        JumpToFirst:null,
-        InnerJoin:null,
-        EnableSound:null,
-        Volume:null,
-        Polyphony:null,
-        FrequencyPrecision:null,
-        CentPrecision:null,
-        FirstPianoKey:null,
-        LastPianoKey:null,
-        FirstPianoOctave:null
-    };
 
     loadDefaults() {
         this.#fields.VideoFormat = 'ntsc';
@@ -64,34 +45,48 @@ export class Options {
 
     // form values
     get VideoFormat() { return this.#fields.VideoFormat }
-    get TuningMethod() { return this.#fields.TuningMethod }
-    get A4Frequency() { return this.#fields.A4Frequency }
-    get CentTranspose() { return this.#fields.CentTranspose }
-    get NumMicroTones() { return this.#fields.NumMicroTones }
-    get TuningSensitivity() { return this.#fields.TuningSensitivity }
-    get TuningGradient() { return this.#fields.TuningGradient }
-    get PrintBlackKeys() { return this.#fields.PrintBlackKeys }
-    get PrintGeometry() { return this.#fields.PrintGeometry }
-    get PrintFrequency() { return this.#fields.PrintFrequency }
-    get ShrinkPiano() { return this.#fields.ShrinkPiano }
-    get JumpToFirst() { return this.#fields.JumpToFirst }
-    get EnableSound() { return this.#fields.EnableSound }
-    get Volume() { return this.#fields.Volume }
-    get Polyphony() { return this.#fields.Polyphony }
     set VideoFormat(val) { this.#fields.VideoFormat = val }
-    set A4Frequency(val) { this.#fields.A4Frequency = val }
+
+    get TuningMethod() { return this.#fields.TuningMethod }
     set TuningMethod(val) { this.#fields.TuningMethod = val }
+
+    get A4Frequency() { return this.#fields.A4Frequency }
+    set A4Frequency(val) { this.#fields.A4Frequency = val }
+
+    get CentTranspose() { return this.#fields.CentTranspose }
     set CentTranspose(val) { this.#fields.CentTranspose = val }
+
+    get NumMicroTones() { return this.#fields.NumMicroTones }
     set NumMicroTones(val) { this.#fields.NumMicroTones = val }
+
+    get TuningSensitivity() { return this.#fields.TuningSensitivity }
     set TuningSensitivity(val) { this.#fields.TuningSensitivity = val }
+
+    get TuningGradient() { return this.#fields.TuningGradient }
     set TuningGradient(val) { this.#fields.TuningGradient = val }
+
+    get PrintBlackKeys() { return this.#fields.PrintBlackKeys }
     set PrintBlackKeys(val) { this.#fields.PrintBlackKeys = val }
+
+    get PrintGeometry() { return this.#fields.PrintGeometry }
     set PrintGeometry(val) { this.#fields.PrintGeometry = val }
+
+    get PrintFrequency() { return this.#fields.PrintFrequency }
     set PrintFrequency(val) { this.#fields.PrintFrequency = val }
+
+    get ShrinkPiano() { return this.#fields.ShrinkPiano }
     set ShrinkPiano(val) { this.#fields.ShrinkPiano = val }
+
+    get JumpToFirst() { return this.#fields.JumpToFirst }
     set JumpToFirst(val) { this.#fields.JumpToFirst = val }
+
+    get EnableSound() { return this.#fields.EnableSound }
     set EnableSound(val) { this.#fields.EnableSound = val }
+
+    get Volume() { return this.#fields.Volume }
     set Volume(val) { this.#fields.Volume = val }
+
+    get Polyphony() { return this.#fields.Polyphony }
     set Polyphony(val) { this.#fields.Polyphony = val }
 
     // non form values
@@ -108,54 +103,54 @@ export class Options {
 
     readFromForm() {
         this.#fields.AtariTones.length = 0;
-        this.#fields.AtariTones.push(parseInt(document.getElementById('AtariTone0Id').value));
+        this.#fields.AtariTones.push(parseInt(document.querySelector('#AtariTone0Id').value));
 
-        let e = document.getElementById('AtariTone1Id').value;
-        if (e != '')
+        let e = document.querySelector('#AtariTone1Id').value;
+        if (e != null)
             this.#fields.AtariTones.push(parseInt(e));
 
-        e = document.getElementById('AtariTone2Id').value;
-        if (e != '')
+        e = document.querySelector('#AtariTone2Id').value;
+        if (e != null)
             this.#fields.AtariTones.push(parseInt(e));
 
-        this.#fields.VideoFormat = document.getElementById('VideoFormatId').value;
-        this.#fields.TuningMethod = document.getElementById('TuningMethodId').value;
-        this.#fields.A4Frequency = parseFloat(document.getElementById('A4FrequencyId').value);
-        this.#fields.TuningSensitivity = parseInt(document.getElementById('TuningSensitivityId').value);
-        this.#fields.TuningGradient = document.getElementById('TuningGradientId').checked ? true : false;
-        this.#fields.CentTranspose = parseInt(document.getElementById('CentTransposeId').value);
-        this.#fields.NumMicroTones = parseInt(document.getElementById('NumMicroTonesId').value);
-        this.#fields.PrintBlackKeys = document.getElementById('PrintBlackKeysId').checked ? true : false;
-        this.#fields.PrintGeometry = document.getElementById('PrintGeometryId').checked ? true : false;
-        this.#fields.PrintFrequency = document.getElementById('PrintFrequencyId').checked ? true : false;
-        this.#fields.ShrinkPiano = document.getElementById('ShrinkPianoId').checked ? true : false;
-        this.#fields.JumpToFirst = document.getElementById('JumpToFirstId').checked ? true : false;
-        this.#fields.Volume = parseInt(document.getElementById('VolumeId').value);
-        this.#fields.Polyphony = parseInt(document.getElementById('PolyphonyId').value);
+        this.#fields.VideoFormat = document.querySelector('#VideoFormatId').value;
+        this.#fields.TuningMethod = document.querySelector('#TuningMethodId').value;
+        this.#fields.A4Frequency = parseFloat(document.querySelector('#A4FrequencyId').value);
+        this.#fields.TuningSensitivity = parseInt(document.querySelector('#TuningSensitivityId').value);
+        this.#fields.TuningGradient = document.querySelector('#TuningGradientId').checked ? true : false;
+        this.#fields.CentTranspose = parseInt(document.querySelector('#CentTransposeId').value);
+        this.#fields.NumMicroTones = parseInt(document.querySelector('#NumMicroTonesId').value);
+        this.#fields.PrintBlackKeys = document.querySelector('#PrintBlackKeysId').checked ? true : false;
+        this.#fields.PrintGeometry = document.querySelector('#PrintGeometryId').checked ? true : false;
+        this.#fields.PrintFrequency = document.querySelector('#PrintFrequencyId').checked ? true : false;
+        this.#fields.ShrinkPiano = document.querySelector('#ShrinkPianoId').checked ? true : false;
+        this.#fields.JumpToFirst = document.querySelector('#JumpToFirstId').checked ? true : false;
+        this.#fields.Volume = parseInt(document.querySelector('#VolumeId').value);
+        this.#fields.Polyphony = parseInt(document.querySelector('#PolyphonyId').value);
     }
 
     writeToForm() {
-        document.getElementById('AtariTone0Id').value = this.#fields.AtariTones[0];
-        document.getElementById('AtariTone1Id').value = this.#fields.AtariTones[1];
-        document.getElementById('AtariTone2Id').value = this.#fields.AtariTones[2];
-        document.getElementById('VideoFormatId').value = this.#fields.VideoFormat;
-        document.getElementById('TuningMethodId').value = this.#fields.TuningMethod;
-        document.getElementById('A4FrequencyId').value = this.#fields.A4Frequency;
-        document.getElementById('A4FrequencyRangeId').value = parseInt(this.#fields.A4Frequency);
-        document.getElementById('TuningSensitivityId').value = this.#fields.TuningSensitivity;
-        document.getElementById('TuningSensitivityRangeId').value = this.#fields.TuningSensitivity;
-        document.getElementById('TuningGradientId').checked = this.#fields.TuningGradient;
-        document.getElementById('CentTransposeId').value = this.#fields.CentTranspose;
-        document.getElementById('CentTransposeRangeId').value = this.#fields.CentTranspose;
-        document.getElementById('NumMicroTonesId').value = this.#fields.NumMicroTones;
-        document.getElementById('NumMicroTonesRangeId').value = this.#fields.NumMicroTones;
-        document.getElementById('PrintBlackKeysId').checked = this.#fields.PrintBlackKeys;
-        document.getElementById('PrintGeometryId').checked = this.#fields.PrintGeometry;
-        document.getElementById('PrintFrequencyId').checked = this.#fields.PrintFrequency;
-        document.getElementById('ShrinkPianoId').checked = this.#fields.ShrinkPiano;
-        document.getElementById('JumpToFirstId').checked = this.#fields.JumpToFirst;
-        document.getElementById('VolumeId').value = this.#fields.Volume;
-        document.getElementById('PolyphonyId').value = this.#fields.Polyphony;
+        document.querySelector('#AtariTone0Id').value = this.#fields.AtariTones[0];
+        document.querySelector('#AtariTone1Id').value = this.#fields.AtariTones[1];
+        document.querySelector('#AtariTone2Id').value = this.#fields.AtariTones[2];
+        document.querySelector('#VideoFormatId').value = this.#fields.VideoFormat;
+        document.querySelector('#TuningMethodId').value = this.#fields.TuningMethod;
+        document.querySelector('#A4FrequencyId').value = this.#fields.A4Frequency;
+        document.querySelector('#A4FrequencyRangeId').value = parseInt(this.#fields.A4Frequency);
+        document.querySelector('#TuningSensitivityId').value = this.#fields.TuningSensitivity;
+        document.querySelector('#TuningSensitivityRangeId').value = this.#fields.TuningSensitivity;
+        document.querySelector('#TuningGradientId').checked = this.#fields.TuningGradient;
+        document.querySelector('#CentTransposeId').value = this.#fields.CentTranspose;
+        document.querySelector('#CentTransposeRangeId').value = this.#fields.CentTranspose;
+        document.querySelector('#NumMicroTonesId').value = this.#fields.NumMicroTones;
+        document.querySelector('#NumMicroTonesRangeId').value = this.#fields.NumMicroTones;
+        document.querySelector('#PrintBlackKeysId').checked = this.#fields.PrintBlackKeys;
+        document.querySelector('#PrintGeometryId').checked = this.#fields.PrintGeometry;
+        document.querySelector('#PrintFrequencyId').checked = this.#fields.PrintFrequency;
+        document.querySelector('#ShrinkPianoId').checked = this.#fields.ShrinkPiano;
+        document.querySelector('#JumpToFirstId').checked = this.#fields.JumpToFirst;
+        document.querySelector('#VolumeId').value = this.#fields.Volume;
+        document.querySelector('#PolyphonyId').value = this.#fields.Polyphony;
     }
 
     saveToStorage() {
@@ -183,10 +178,15 @@ export class Options {
         window.localStorage.removeItem("Options");
     }
 
+    getStorage() {
+        return window.localStorage.getItem("Options");
+    }
+
     toString() {
         let str = '';
         for (let n in this.#fields)
             str += n + '=' + this.#fields[n] + "\n";
         return str;
     }
+
 }
