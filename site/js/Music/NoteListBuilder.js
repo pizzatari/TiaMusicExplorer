@@ -18,6 +18,9 @@ export class NoteGroup {
             return this.#noteList[0];
         return null;
     }
+    get ListLength() {
+        return this.#noteList.length;
+    }
 
     addNote(note) {
         this.#noteList.push(note);
@@ -45,8 +48,14 @@ export class NoteTable extends Map {
     #noteLists = [];
     #matchedNotes = [];
     #unmatchedNotes = [];
-    #pivotBounds = { firstMicroId:-1, lastMicroId:0 };
-    #noteBounds = { firstMicroId:-1, lastMicroId:0 };
+    #pivotBounds = {
+        firstMicroId:-1, lastMicroId:0,
+        firstMidiNum:-1, lastMidiNum:0
+    };
+    #noteBounds = {
+        firstMicroId:-1, lastMicroId:0,
+        firstMidiNum:-1, lastMidiNum:0
+    };
 
     constructor(pivotNoteList, noteList) {
         super();
@@ -80,6 +89,12 @@ export class NoteTable extends Map {
 
             if (note.MicroId > this.#noteBounds.lastMicroId)
                 this.#noteBounds.lastMicroId = note.MicroId;
+
+            if (this.#noteBounds.firstMidiNum == -1 || note.MidiNum < this.#noteBounds.firstMidiNum)
+                this.#noteBounds.firstMidiNum = note.MidiNum;
+
+            if (note.MidiNum > this.#noteBounds.lastMidiNum)
+                this.#noteBounds.lastMidiNum = note.MidiNum;
         }
         return noteList;
     }
@@ -91,6 +106,10 @@ export class NoteTable extends Map {
 			let keyNote = group.KeyNote;
 			let note = group.BestNote;
 
+            // save a record of paired black notes
+            if (ary.length > 0 && keyNote.IsBlack && note != null)
+                ary[ary.length-1].TIASharpNote = note;
+
             let row = {
 				MicroId: keyNote.MicroId,
 				KeyNum: keyNote.KeyNum,
@@ -101,9 +120,8 @@ export class NoteTable extends Map {
 				Key: keyNote.Key,
 				KeyUp: keyNote.KeyUp,
 				KeyDown: keyNote.KeyDown,
-                FlatKey: keyNote.FlatKey,
-                SharpKey: keyNote.SharpKey,
-                SharpNote: keyNote.getSharpNote(),
+                //FlatKey: keyNote.FlatKey,
+                //SharpKey: keyNote.SharpKey,
 
                 IsWhite: keyNote.IsWhite,
                 IsBlack: keyNote.IsBlack,
@@ -118,7 +136,14 @@ export class NoteTable extends Map {
 				AUDF: note != null ? note.AUDF : '',
 				Cents: note != null ? note.Cents : '',
 				CentsRounded: note != null ? note.getCentsRounded() : '',
-				TIALabel: note != null ? note.AUDC + '/' + note.AUDF : ''
+				TIALabel: note != null ? note.AUDC + '/' + note.AUDF : '',
+
+
+                KeyNote: keyNote,
+                SharpKeyNote: keyNote.getSharpNote(),
+
+                TIANote: note,
+                TIASharpNote: null
 			};
             ary.push(row);
         }

@@ -8,53 +8,18 @@ body {
     background-repeat:none;
     background-size:100% 3000px;
 }
-
-/*
-h1 {
-    box-sizing:border-box;
-    background-color:#fff;
-    clear:both;
-}
-h1 button {
-    max-height:50%;
-    margin-top:-3px;
-    float:right;
-}
-*/
-
 header > h1 {
     margin:4px 4px 4px 0;
     background-color:white;
-    /*box-shadow:inset 0 0 8px 8px #aaa;
-    background-image:linear-gradient(#000, #fff, #000);
-    color:white;
-    */
 }
-
-/*
-header > h1  a {
-    color:#eee;
-}
-*/
-
 main section {
     width:100%;
     margin-bottom:4px;
 }
 
-/* piano roll */
-/*
-main > section:first-child > div {
-    height:125px;
-}
-*/
-
-/* 3 columns */
+/* 3 column layout */
 .columns {
     display:flex;
-}
-.columns > .column {
-    /*width:calc(100%/3);*/
 }
 .columns > .column:nth-child(2) {
     flex:2 1 auto;
@@ -82,13 +47,6 @@ fieldset > legend {
     font-weight:bold;
 }
 
-div {
-    border-color:1px solid red !important;
-}
-span {
-    border-color:1px solid green !important;
-}
-
 /* Result Options panel */
 .panel fieldset input,
 .panel fieldset select {
@@ -99,9 +57,6 @@ span {
 .panel fieldset label {
     float:left;
     margin-bottom:5px;
-}
-.panel fieldset button {
-    float:right;
 }
 .panel fieldset ul {
     float:left;
@@ -116,150 +71,155 @@ span {
     clear:none;
 }
 
-#PianoRoll {
-    box-sizing:border-box;
-    user-select:none;
-    padding-bottom:5px;
+#MidiId .group {
+    float:left;
+    vertical-align:top;
+    clear:none;
 }
-#PianoRoll .piano {
-    max-height:100px;
-    margin-left:5px;
-    overflow-y:hidden;
-    white-space:nowrap;
-    font-size:1em;
-}
-#PianoRoll .piano > .key {
-    display:inline-block;
-    position:relative;
-    text-align:center;
-}
-#PianoRoll .piano > .key.white { vertical-align:bottom; }
-#PianoRoll .piano > .key.black { width:0; }
-#PianoRoll .piano > .key > span {
-    display:inline-block;
-    position:relative;
-    border-style:solid;
-    border-width:0 1px 1px 1px;
-    border-color:#aaa #333 #000 #777;
-    border-radius:0 0 6px 6px;
-}
-#PianoRoll .piano > .key > span.white {
-    width:22px;
-    height:80px;
-    line-height:120px;
-    color:#555;
-    background-color:#fff;
-    background-image:linear-gradient(#bbf, #ffc);
-}
-#PianoRoll .piano > .key > span.black {
-    width:20px;
-    height:47px;
-    top:-33px;
-    left:-11px;
-    color:#fff;
-    background-color:#000;
-    border-color:#aaa #555 #222 #aaa;
-    background-image:linear-gradient(#335, #000);
-    z-index:10;
-}
-#PianoRoll .piano > .key > span:hover {
-    border-color:orange;
-    background-color:#bbd;
-    background-image:none;
+#MidiId p.group {
+    display:block;;
+    float:left;
+    width:175px;
 }
 
-#PianoTab .piano {
-    width:100%;
-    margin:2px;;
-    padding:3px;
-    border-collapse:collapse;
-    border-spacing:0;
-    user-select:none;
-    background-image:linear-gradient(to left, #ccf, #aad);
+button#RescanId { float:left; }
+input#VolumeId { width:200px; }
+input#PolyphonyId { width:3em; }
+
+#MidiInputGroup {
+    clear:left;
+    margin-top:12px;
 }
-#PianoTab .piano tr th {
+#MidiInputGroup #MidiInputDeviceId {
+    clear:left;
+    width:100%;
+}
+
+/* piano rolls */
+.piano span, .piano tr {
+    color:#000;
+    background-color:#555;
+}
+.piano span {
+    box-sizing:border-box;
+    border:1px solid;
+    border-color:#ccc #333 #000 #ccc;
+}
+.piano span.white {
+    color:#555;
+    background-color:hsl(235deg,40%,75%);
+    background-image:none;
+}
+.piano span.black {
+    color:#333;
+    background-color:hsl(235deg,40%,65%);
+    background-image:none;
+}
+.piano span.white.paired-flat {
+    color:#000;
+    background-color:#fff;
+}
+.piano span.black.paired-flat {
+    color:#fff;
+    background-color:#000;
+}
+.piano .paired-gradient td,
+.piano .paired-gradient span {
+    color:inherit !important;
+    background-color:inherit !important;
+}
+
+#VPiano tr.hidden {
+    /*
+    visibility:collapse;
+    width:0;
+    height:0;
+    margin:0;
+    padding:0;
+    */
+}
+
+#VPiano td.key {
+    width:120px;
+    text-align:right;
+}
+#VPiano span {
+    display:inline-block;
+    height:100%;
+    width:100%;
+    padding:0px 4px;
+    border-radius:6px 0 0 6px;
+    text-align:left;
+}
+#VPiano tr.hidden {
+    visibility:collapse;
+}
+#VPiano tr.hidden span.black {
+    visibility:visible;
+    position:relative;
+    width:80px;
+    height:24px;
+    top:-3px;
+    right:0;
+    z-index:10;
+    padding:0px 4px;
+    border-radius:6px 0 0 6px;
+    text-align:left;
+}
+
+/*
+    background-image:linear-gradient(#ffc, #bbf, #ffc);
+    background-image:linear-gradient(#000, #555, #000);
+*/
+/*
+.piano span.white.paired-gradient {
+    color:#000;
+    background-color:#fff;
+}
+*/
+.piano th {
     border-bottom:1px solid black;
     border-right:1px solid black;
     background-color:#bbf;
 }
-#PianoTab .piano tr td {
-    position:relative;
-    box-sizing:border-box;
-    height:24px;
-    line-height:20px;
-    padding:0px;
-    margin:0px;
-    text-align:center;
-    vertical-align:middle;
-}
-#PianoTab .piano tr td sub {
-    font-size:0.8em;
-    vertical-align:middle;
-}
-#PianoTab .piano tr td > span {
-    vertical-align:top;
-    line-height:20px;
-}
-#PianoTab .piano tr td:not(:first-child) {
-    border-bottom:1px solid black;
-    border-right:1px solid black;
-}
-#PianoTab .piano tr td:first-child {
-    width:120px;
-    text-align:right;
-}
-#PianoTab .piano tr td:first-child > span {
-    display:inline-block;
-    box-sizing:border-box;
-    height:100%;
-    width:100%;
-    padding:0px 4px;
-    border-style:solid;
-    border-color:#aaa #555 #222 #aaa;
-    border-width:0 1px 1px 1px;
-    border-radius:6px 0 0 6px;
-    text-align:left;
-}
-#PianoTab .piano tr td:first-child > span.white {
-    color:#555;
-    background-color:#fff;
-    background-image:linear-gradient(to left, #bbf, #ffc);
-}
-#PianoTab .piano tr.single td:first-child > span.black {
-    color:#bbb;
-    background-color:#fff;
-    background-image:linear-gradient(to left, #335, #000);
+/*.piano td { box-sizing:border-box }*/
+
+#HPiano span:hover {
+    background-color:hsl(235deg,40%,90%);
+    border:1px solid red;
+    background-image:none;
 }
 
-#PianoTab .piano tr.double td:first-child > span.black {
-    position:absolute;
-    height:20px;
-    top:12px;
-    right:0;
-    width:65%;
-    color:#bbb;
-    text-align:right;
-    background-color:#000;
-    background-image:linear-gradient(to left, #335, #000);
-    z-index:10;
+#VPiano td {
+    border:1px solid;
+    border-color:#fff #aaa transparent #fff;
+    background-color:#ccc;
 }
-#PianoTab .piano tr:hover td {
-    background-color:#ddf;
+#VPiano tr:hover td {
+    border-color:red #aaa red #fff;
 }
-#PianoTab .piano td > span.white:hover,
-#PianoTab .piano td > span.black:hover {
-    border-color:orange;
+
+/*
+#VPiano tr:hover td {
+    color:#000;
+    background-color:hsl(235deg,40%,90%);
+    background-image:none;
+    border:solid red;
+}
+#VPiano tr:hover span {
+    background-color:hsl(235deg,40%,90%);
+    background-image:none !important;
+}
+*/
+
+/*
+.piano span:hover {
+    border:1px solid red;
     background-color:#bbd;
     background-image:none;
 }
-#PianoTab .piano td > span.black:hover { color:#000; }
+*/
 
-#PianoTab .piano tr:last-child td span.black {
-    display:none;
-}
-
-
-/* miscellaneous */
 .key-on {
     color:#000 !important;
     background-color:#9f9 !important;
@@ -278,3 +238,72 @@ span.error {
     font-weight:bold;
     font-style:italic;
 }
+
+#HPiano, #VPiano {
+    box-sizing:border-box;
+    user-select:none;
+}
+#HPiano { padding-bottom:5px; }
+#HPiano .piano {
+    max-height:100px;
+    margin-left:5px;
+    overflow-y:hidden;
+    white-space:nowrap;
+    font-size:1em;
+}
+#HPiano .key {
+    display:inline-block;
+    position:relative;
+    text-align:center;
+}
+#HPiano .key.white { vertical-align:bottom }
+#HPiano .key.black { width:0 }
+#HPiano span {
+    display:inline-block;
+    position:relative;
+    border-radius:0 0 6px 6px;
+}
+#HPiano span.white {
+    width:22px;
+    height:80px;
+    line-height:120px;
+}
+#HPiano span.black {
+    width:20px;
+    height:47px;
+    top:-33px;
+    left:-11px;
+    z-index:10;
+}
+
+#VPiano .piano {
+    width:100%;
+    margin:2px;;
+    padding:3px;
+    border-spacing:0;
+}
+#VPiano td {
+    position:relative;
+    height:24px;
+    line-height:20px;
+    padding:0px;
+    margin:0px;
+    text-align:center;
+    vertical-align:middle;
+}
+#VPiano sub {
+    font-size:0.8em;
+    vertical-align:middle;
+}
+#VPiano span {
+    vertical-align:top;
+    line-height:20px;
+}
+/*
+#VPiano td:not(.key) {
+    border-bottom:1px solid black;
+    border-right:1px solid black;
+}
+*/
+
+/* miscellaneous */

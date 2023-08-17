@@ -1,0 +1,15 @@
+.background {background-image:
+radial-gradient(circle at left 300px top 300px,rgba(128,128,255,0.05) 500px,rgba(0,0,128,0.05) 510px),
+radial-gradient(circle at left 339px top 420px,rgba(128,128,255,0.05) 540px,rgba(0,0,128,0.05) 550px),
+radial-gradient(circle at left 372px top 540px,rgba(128,128,255,0.05) 580px,rgba(0,0,128,0.05) 590px),
+radial-gradient(circle at left 393px top 660px,rgba(128,128,255,0.05) 620px,rgba(0,0,128,0.05) 630px),
+radial-gradient(circle at left 400px top 780px,rgba(128,128,255,0.05) 660px,rgba(0,0,128,0.05) 670px),
+radial-gradient(circle at left 391px top 900px,rgba(128,128,255,0.05) 700px,rgba(0,0,128,0.05) 710px),
+radial-gradient(circle at left 368px top 1020px,rgba(128,128,255,0.05) 740px,rgba(0,0,128,0.05) 750px),
+radial-gradient(circle at left 333px top 1140px,rgba(128,128,255,0.05) 780px,rgba(0,0,128,0.05) 790px),
+radial-gradient(circle at left 294px top 1260px,rgba(128,128,255,0.05) 820px,rgba(0,0,128,0.05) 830px),
+radial-gradient(circle at left 256px top 1380px,rgba(128,128,255,0.05) 860px,rgba(0,0,128,0.05) 870px),
+radial-gradient(circle at left 224px top 1500px,rgba(128,128,255,0.05) 900px,rgba(0,0,128,0.05) 910px),
+radial-gradient(circle at left 205px top 1620px,rgba(128,128,255,0.05) 940px,rgba(0,0,128,0.05) 950px),
+radial-gradient(circle at left 200px top 1740px,rgba(128,128,255,0.05) 980px,rgba(0,0,128,0.05) 990px),
+linear-gradient(#00f,#f00)}

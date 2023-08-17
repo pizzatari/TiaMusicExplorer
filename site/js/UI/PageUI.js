@@ -1,4 +1,11 @@
 import { Music } from "../Music/Music.js";
+import { NoteGroup } from "../Music/NoteListBuilder.js";
+
+const KeyOnColor = { text: '#000', key: '#fff', image: '' };
+const KeyColors = {
+	white: { text: '#000', key: '#fff', image: '' },
+	black: { text: '#fff', key: '#000', image: '' }
+};
 
 export class PageUI {
     #opts = null;
@@ -8,8 +15,8 @@ export class PageUI {
         this.#opts = opts;
     	this.#elems = {
         	body: $('body'),
-        	horizPiano: $('#PianoRoll'),
-        	vertPiano: $('#PianoTab')
+        	hPiano: $('#HPiano'),
+        	vPiano: $('#VPiano')
     	};
     }
 
@@ -30,14 +37,18 @@ export class PageUI {
         return document.querySelector('#VerticalKeys');
     }
 
+    get MainForm() {
+        return document.querySelector('#MainFormId');
+    }
+
     log(msg) {
         let elem = document.querySelector('#ConsoleLog');
         elem.innerHTML += msg + "<br/>";
     }
 
     updateNoteTables(noteTable) {
-        this.#elems.horizPiano.html(this.#getHorizontalPiano(noteTable.PivotNoteList));
-        this.#elems.vertPiano.html(this.#getVerticalPiano(noteTable));
+        this.#elems.hPiano.html(this.#getHorizontalPiano(noteTable));
+        this.#elems.vPiano.html(this.#getVerticalPiano(noteTable));
     }
 
     clearMidiLists() {
@@ -77,6 +88,51 @@ export class PageUI {
         return '[<span class="' + cssClass + '">' + msg + '</span>]';
     }
 
+    scrollTo(midiNum) {
+		let id = '#v_' + midiNum + '_0';
+		$('html, body').animate({
+   	   	   scrollTop: $(id).offset().top
+		}, 1000);
+    }
+
+    #getHorizontalPiano(noteTable) {
+		let table = noteTable.getFlattenedTable();
+        let html = '<div id="HorizontalKeys" class="piano">';
+
+        for(const row of table) {
+			let keyNote = row.KeyNote;
+			let note = row.TIANote;
+
+			if (keyNote.MicroDist != 0)
+				continue;
+
+            let midiNum = 'MicroDist="' + keyNote.MicroDist + '"';
+            let microDist = 'MidiNum="' + keyNote.MidiNum + '"';
+            let keyId = 'h_' + keyNote.MidiNum + '_' + keyNote.MicroDist;
+            let classNames = keyNote.IsWhite ? 'white' : 'black';
+
+			if (note != null && note.Cents <= this.#opts.TuningSensitivity) {
+				if (this.#opts.TuningGradient) {
+    				let colorClass = this.#keyGradientCSS(note.Cents, this.#opts.TuningSensitivity);
+					classNames += ' paired-gradient ' + colorClass;
+				} else {
+					classNames += ' paired-flat';
+				}
+			}
+
+
+            html += `<div class="key ${classNames}">`;
+            if (keyNote.IsWhite) {
+                html += `<span id="${keyId}" class="white" ${midiNum} ${microDist}>${keyNote.Key}<sub>${keyNote.Octave}</sub></span>`;
+            } else {
+                html += `<span id="${keyId}" class="black" ${midiNum} ${microDist}>${keyNote.KeyUp}<br/>${keyNote.KeyDown}</span>`;
+            }
+            html += '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+/*
     #getHorizontalPiano(noteList) {
         let html = '<div id="HorizontalKeys" class="piano">';
         for(const note of noteList) {
@@ -87,6 +143,16 @@ export class PageUI {
             let microDist = 'MidiNum="' + note.MidiNum + '"';
             let keyId = 'h_' + note.MidiNum + '_' + note.MicroDist;
             let keyClass = note.IsWhite ? 'white' : 'black';
+
+			if (note != null && note.Cents <= this.#opts.TuningSensitivity) {
+				if (this.#opts.TuningGradient) {
+    				colorClass = this.#keyGradientCSS(note.Cents, this.#opts.TuningSensitivity);
+					classNames += ' paired-gradient ' + colorClass;
+				} else {
+					classNames += ' paired-flat';
+				}
+			}
+
 
             html += '<div class="key ' + keyClass + '">';
             if (note.IsWhite) {
@@ -99,18 +165,19 @@ export class PageUI {
         html += '</div>';
         return html;
     }
+*/
 
     #getVerticalPiano(noteTable) {
         let bounds = noteTable.NoteBounds;
 		let table = noteTable.getFlattenedTable(); 
 
         let html = this.#VTableTop();
-        for(let row of table) {
-            if (this.#opts.PrintBlackKeys) {
-				html += this.#VTableSingleRow(row);
-            } else if (row.IsWhite) {
-				html += this.#VTableDoubleRow(row);
-			}
+        for(const row of table) {
+            //if (this.#opts.PrintBlackKeys) {
+				html += this.#VTableRow(row);
+            //} else if (row.IsWhite) {
+			//	html += this.#VTableDoubleRow(row);
+			//}
         }
         html += this.#VTableBottom();
         return html;
@@ -135,60 +202,243 @@ export class PageUI {
 		return '</table>';
 	}
 
+	#VTableRow(row) {
+		let key = this.#VTableKey(row.KeyNote, row.TIANote);
+		let classNames = key.classNames;
+
+        if (!this.#opts.PrintBlackKeys && row.KeyNote.IsBlack)
+			classNames += ' hidden';
+
+		let tiaLabel = '';
+		let tiaFrequency = '';
+		let tiaCents = '';
+		let tiaFrequencyRounded = '';
+		let tiaCentsRounded = '';
+
+		if (row.TIANote != null) {
+			tiaLabel = row.TIANote.TIALabel;
+			tiaFrequency = row.TIANote.Frequency;
+			tiaCents = row.TIANote.Cents;
+			tiaFrequencyRounded = row.TIANote.Frequency.toFixed(2);
+			tiaCentsRounded = row.TIANote.Cents.toFixed(2);
+		}
+
+		return `
+<tr class="${classNames}">
+<td class="key">${key.html}</td>
+<td title="${row.KeyNote.Frequency} Hz">${row.KeyNote.Frequency.toFixed(2)}</td>
+<td>${tiaLabel}</td>
+<td title="${tiaFrequency} Hz">${tiaFrequencyRounded}</td>
+<td title="${tiaCents}">${tiaCentsRounded}</td>
+<td>${row.KeyNote.KeyNum}</td>
+<td>${row.KeyNote.MicroId}</td>
+</tr>`;
+	}
+
+	#VTableKey(keyNote, note=null) {
+    	let keyId = 'v_' + keyNote.MidiNum + '_' + keyNote.MicroDist;
+        let midiNum = 'MicroDist="' + keyNote.MicroDist + '"';
+        let microDist = 'MidiNum="' + keyNote.MidiNum + '"';
+		let micro = this.#opts.NumMicroTones > 1 ? '.' + keyNote.MicroDist : '';
+		let classNames = keyNote.IsWhite ? 'white' : 'black';
+		let colorClass = '';
+
+		if (note != null && note.Cents <= this.#opts.TuningSensitivity) {
+			if (this.#opts.TuningGradient) {
+    			colorClass = this.#keyGradientCSS(note.Cents, this.#opts.TuningSensitivity);
+				classNames += ' paired-gradient ' + colorClass;
+			} else {
+				classNames += ' paired-flat';
+			}
+		}
+
+		let html =
+`<span id="${keyId}" class="${classNames}" ${midiNum} ${microDist}
+	title="${keyNote.Frequency} Hz">${keyNote.Key}</span>`;
+
+		return { 'html': html, 'classNames': classNames, 'colorClass': colorClass };
+	}
+
+    #keyGradientCSS(cents, sensitivity=50.0) {
+		let divisor = sensitivity > 0 ? sensitivity : 1;
+
+      	// linear relative to 50 cents
+        //let val = Math.min(100 - Math.round(cents/50.0*30), 100);
+        // square root curve
+        //let val = Math.min(100 - Math.round(Math.sqrt(cents/50) * 30), 100);
+
+        // linear relative to tuning sensitivity: results in a range between 70% to 100%
+		let magnitude = Math.round(Math.abs(cents/divisor * 30));
+        let lightness = Math.max(0, Math.min(100, 100-magnitude));
+        return 'color-' + lightness.toFixed(0);
+	}
+
+/*
+	#VTableSingleRow(row) {
+		let keyHtml = this.#VTableKey(row.KeyNote, row.TIANote);
+
+		let style = '';
+		if (row.TIANote != null && row.TIANote.Cents <= this.#opts.TuningSensitivity) {
+			let rowColor = KeyOnColor;
+			if (this.#opts.TuningGradient)
+    			rowColor = this.#keyGradientCSS(row.TIANote.Cents, this.#opts.TuningSensitivity);
+			style += "background-color:" + rowColor.key + " !important;";
+		}
+
+		let tiaLabel = '';
+		let tiaFrequency = '';
+		let tiaCents = '';
+		let tiaFrequencyRounded = '';
+		let tiaCentsRounded = '';
+
+		if (row.TIANote != null) {
+			tiaLabel = row.TIANote.TIALabel;
+			tiaFrequency = row.TIANote.Frequency;
+			tiaCents = row.TIANote.Cents;
+			tiaFrequencyRounded = row.TIANote.Frequency.toFixed(2);
+			tiaCentsRounded = row.TIANote.Cents.toFixed(2);
+		}
+
+		return `
+<tr class="single" style="${style}">
+<td>${keyHtml}</td>
+<td title="${row.KeyNote.Frequency} Hz">${row.KeyNote.Frequency.toFixed(2)}</td>
+<td>${tiaLabel}</td>
+<td title="${tiaFrequency} Hz">${tiaFrequencyRounded}</td>
+<td title="${tiaCents}">${tiaCentsRounded}</td>
+<td>${row.KeyNote.KeyNum}</td>
+<td>${row.KeyNote.MicroId}</td>
+</tr>`;
+	}
+
+	#VTableKey(keyNote, note=null) {
+		let className = keyNote.IsWhite ? 'white' : 'black';
+
+		if (note != null && note.Cents <= this.#opts.TuningSensitivity) {
+			if (this.#opts.TuningGradient) {
+				className += ' gradient';
+			} else {
+				className += ' flat';
+			}
+		}
+
+    	let keyId = 'v_' + keyNote.MidiNum + '_' + keyNote.MicroDist;
+        let midiNum = 'MicroDist="' + keyNote.MicroDist + '"';
+        let microDist = 'MidiNum="' + keyNote.MidiNum + '"';
+		let micro = this.#opts.NumMicroTones > 1 ? '.' + keyNote.MicroDist : '';
+
+		if (keyNote.IsWhite)
+			return `<span id="${keyId}" class="${className}" ${midiNum} ${microDist}>${keyNote.Key}<sub>${keyNote.Octave}${micro}</sub></span>`;
+
+		let style = '';
+		if (note != null && note.Cents <= this.#opts.TuningSensitivity) {
+			let rowColor = keyNote.IsWhite ? KeyColors.white : KeyColors.black;
+			if (this.#opts.TuningGradient) {
+    			rowColor = this.#keyGradientCSS(note.Cents, this.#opts.TuningSensitivity);
+				style += "background-color:" + rowColor.key + " !important;";
+			}
+		}
+
+        if (this.#opts.PrintBlackKeys)
+			return `<span id="${keyId}" class="${className}" style="${style}" ${midiNum} ${microDist}>${keyNote.Key}<sub>${keyNote.Octave}${micro}</sub></span>`;
+
+		return `<span id="${keyId}" class="${className}" style="${style}" ${midiNum} ${microDist} title="${keyNote.Frequency} Hz">${keyNote.Key}</span>`;
+	}
+
+    #keyGradientCSS(cents, sensitivity=50.0) {
+		let divisor = sensitivity > 0 ? sensitivity : 1;
+
+      	// linear relative to 50 cents
+        //let val = Math.min(100 - Math.round(cents/50.0*30), 100);
+        // square root curve
+        //let val = Math.min(100 - Math.round(Math.sqrt(cents/50) * 30), 100);
+
+        // linear relative to tuning sensitivity: results in a range between 70% to 100%
+        let lightness = Math.min(100 - Math.abs(Math.round(cents / divisor * 30, 100)));
+        let keyColor = 'hsl(220deg,30%,' + lightness + '%)';
+        return { text:"#000", key:keyColor };
+	}
+*/
 	#VTableDoubleRow(row) {
 		if (row.IsBlack)
 			return '';
 
-if (row.Key == 'C')
-	console.log("key C");
-
-		let micro = (this.#opts.NumMicroTones > 1 ? '.' + row.MicroDist : '');
-        let midiNum = 'MicroDist="' + row.MicroDist + '"';
-        let microDist = 'MidiNum="' + row.MidiNum + '"';
-    	let keyId = 'v_' + row.MidiNum + '_' + row.MicroDist;
-
-		let whiteKey = '<span id="' + keyId + '" class="white" ' + midiNum + ' ' + microDist + '>' + row.Key + '<sub>' + row.Octave + micro + '</sub></span>';
+		let whiteKey = this.#VTableKey(row.KeyNote, row.TIANote);
 		let blackKey = '';
+		if (row.SharpKeyNote != null)
+			blackKey = this.#VTableKey(row.SharpKeyNote, row.TIASharpNote);
 
-		if (row.SharpNote != null) {
-    		let bKeyId = 'v_' + row.SharpNote.MidiNum + '_' + row.SharpNote.MicroDist;
-        	let bMidiNum = 'MicroDist="' + row.SharpNote.MicroDist + '"';
-        	let bMicroDist = 'MidiNum="' + row.SharpNote.MidiNum + '"';
-			blackKey = '<span id="' + bKeyId + '" class="black" ' + bMidiNum + ' ' + bMicroDist + '>' + row.SharpNote.KeyUp + ' ' + row.SharpNote.KeyDown + '</span>';
+		let style = '';
+		if (row.TIANote != null && row.TIANote.Cents <= this.#opts.TuningSensitivity) {
+			let rowColor = row.KeyNote.IsWhite ? KeyColors.white : KeyColors.black;
+
+			if (this.#opts.TuningGradient)
+    			rowColor = this.#keyGradientCSS(row.TIANote.Cents, this.#opts.TuningSensitivity);
+
+			style += "background-color:" + rowColor.key + " !important;";
+		}
+
+		let tiaLabel = '';
+		let tiaFrequency = '';
+		let tiaCents = '';
+		let tiaFrequencyRounded = '';
+		let tiaCentsRounded = '';
+
+		if (row.TIANote != null) {
+			tiaLabel = row.TIANote.TIALabel;
+			tiaFrequency = row.TIANote.Frequency;
+			tiaCents = row.TIANote.Cents;
+			tiaFrequencyRounded = row.TIANote.Frequency.toFixed(2);
+			tiaCentsRounded = row.TIANote.Cents.toFixed(2);
 		}
 
 		return `
-<tr class="double">
+<tr class="double" style="${style}">
 <td>${whiteKey}${blackKey}</td>
-<td title="${row.Frequency} Hz">${row.FrequencyRounded}</td>
-<td>${row.TIALabel}</td>
-<td title="${row.TIAFrequency} Hz">${row.TIAFrequencyRounded}</td>
-<td title="${row.Cents}">${row.CentsRounded}</td>
-<td>${row.KeyNum}</td>
-<td>${row.MicroId}</td>
-</tr>`;
-	};
-
-	#VTableSingleRow(row) {
-		let micro = (this.#opts.NumMicroTones > 1 ? '.' + row.MicroDist : '');
-		let className = row.IsWhite ? 'white' : 'black';
-    	let keyId = 'v_' + row.MidiNum + '_' + row.MicroDist;
-		let keyHtml = '';
-
-		if (row.IsWhite)
-			keyHtml = '<span id="' + keyId + '" class="white">' + row.Key + '<sub>' + row.Octave + micro + '</sub></span>';
-		else
-			keyHtml = '<span id="' + keyId + '" class="black">' + row.KeyUp + ' ' + row.KeyDown + ' <sub>' + row.Octave + micro + '</sub></span>';
-
-		return `
-<tr class="single">
-<td>${keyHtml}</td>
-<td title="${row.Frequency} Hz">${row.FrequencyRounded}</td>
-<td>${row.TIALabel}</td>
-<td title="${row.TIAFrequency} Hz">${row.TIAFrequencyRounded}</td>
-<td title="${row.Cents}">${row.CentsRounded}</td>
-<td>${row.KeyNum}</td>
-<td>${row.MicroId}</td>
+<td title="${row.KeyNote.Frequency} Hz">${row.KeyNote.Frequency.toFixed(2)}</td>
+<td>${tiaLabel}</td>
+<td title="${tiaFrequency} Hz">${tiaFrequencyRounded}</td>
+<td title="${tiaCents}">${tiaCentsRounded}</td>
+<td>${row.KeyNote.KeyNum}</td>
+<td>${row.KeyNote.MicroId}</td>
 </tr>`;
 	}
+
+	#VTableSingleRow(row) {
+		let keyHtml = this.#VTableKey(row.KeyNote, row.TIANote);
+
+		let style = '';
+		if (row.TIANote != null && row.TIANote.Cents <= this.#opts.TuningSensitivity) {
+			let rowColor = KeyOnColor;
+			if (this.#opts.TuningGradient)
+    			rowColor = this.#keyGradientCSS(row.TIANote.Cents, this.#opts.TuningSensitivity);
+			style += "background-color:" + rowColor.key + " !important;";
+		}
+
+		let tiaLabel = '';
+		let tiaFrequency = '';
+		let tiaCents = '';
+		let tiaFrequencyRounded = '';
+		let tiaCentsRounded = '';
+
+		if (row.TIANote != null) {
+			tiaLabel = row.TIANote.TIALabel;
+			tiaFrequency = row.TIANote.Frequency;
+			tiaCents = row.TIANote.Cents;
+			tiaFrequencyRounded = row.TIANote.Frequency.toFixed(2);
+			tiaCentsRounded = row.TIANote.Cents.toFixed(2);
+		}
+
+		return `
+<tr class="single" style="${style}">
+<td>${keyHtml}</td>
+<td title="${row.KeyNote.Frequency} Hz">${row.KeyNote.Frequency.toFixed(2)}</td>
+<td>${tiaLabel}</td>
+<td title="${tiaFrequency} Hz">${tiaFrequencyRounded}</td>
+<td title="${tiaCents}">${tiaCentsRounded}</td>
+<td>${row.KeyNote.KeyNum}</td>
+<td>${row.KeyNote.MicroId}</td>
+</tr>`;
+	}
+
 }

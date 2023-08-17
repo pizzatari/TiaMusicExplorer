@@ -288,11 +288,18 @@ export class Music extends EventTarget {
 
     static Round(num, precision) {
         return Math.round(num * (10**precision)) / (10**precision);
+        //return num.toFixed(precision);
     }
 
-    // handle negative numbers
+    // modulo that works with negative numbers (javascript % does not)
     static Modulo(num, modulus) {
-        return num - (Math.floor(num / modulus) * modulus);
+        // I know of two different solutions: 
+
+        // my version
+        //return num - (Math.floor(num / modulus) * modulus);
+
+        // this version should be faster if % has O(1) complexity
+        return ((num % modulus) + modulus) % modulus;
     }
 
     // serializes this object's values to a delimited string. optionally appends additional values to the end.

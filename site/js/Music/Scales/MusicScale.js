@@ -52,16 +52,6 @@ const WhiteKeys    = { 0:false, 1:true,  2:false, 3:true,  4:true,  5:false,
    	   440.0 Hz * 2
 */
 
-/*
-	// returns the tuned note closest to the untuned frequency
-    getNearestNote(frequency) {
-        let num = this.FrequencyToKeyNum(frequency);
-        let dist = this.FrequencyToMicroDist(frequency);
-        //return new MusicNote(this, { keyNum: num, microDist: dist });
-        return { };
-    }
-*/
-
 // Constructor syntax:
 // 	new MusicNote(music, { frequency: float })
 // 	new MusicNote(music, { keyNum: integer, microDist: integer })
@@ -70,44 +60,53 @@ const WhiteKeys    = { 0:false, 1:true,  2:false, 3:true,  4:true,  5:false,
 //  //{ flatNote: MusicNote, sharpNote: MusicNote }
 export class MusicNote {
     #music = null;
-
     #frequency = 0.0;
     #microId = 0;
     #midiNum = 0;
     #microDist = 0;
-
     #keyNum = 0;
-
     #octave = 0;
     #key = '';			// letter key
 	#keyDown = '';		// letter key in down direction
 	#keyUp = '';		// letter key in up direction
-
     #isWhite = true;
     //#flatNote = null;
     //#sharpNote = null;
 
-    constructor(music, args) {
+    constructor(music, args, calculate=true) {
         this.#music = music;
 
-		if (typeof args.frequency != 'undefined') {
+		if (!calculate) {
+            this.#frequency = args.frequency;
+            this.#microId = args.microId;
+            this.#midiNum = args.midiNum;
+            this.#microDist = args.microDist;
+            this.#keyNum = args.keyNum;
+            this.#octave = args.octave;
+            this.#key = args.key;
+            this.#keyDown = args.keyDown;
+            this.#keyUp = args.keyUp;
+            this.#isWhite = args.isWhite;
+            //this.#flatNote = args.flatNote;
+            //this.#sharpNote = args.sharpNote;
+
+		} else if (typeof args.frequency != 'undefined') {
+            // allow detuned frequencies
+            this.#frequency = args.frequency;
             this.#microId = this.#music.FrequencyToMicroId(args.frequency);
             this.#midiNum = this.#music.FrequencyToMidiNum(args.frequency);
             this.#microDist = this.#music.FrequencyToMicroDist(args.frequency);
 			this.#keyNum = this.#music.FrequencyToKeyNum(args.frequency);
-			this.#key = Music.KeyNumToKey(this.#keyNum);
-
-            // calculate tuned piano frequency. args.frequency may be detuned.
-            this.#frequency = this.#music.MicroFrequency(this.#keyNum, this.#microDist);
 
 		} else if (typeof args.keyNum != 'undefined' && typeof args.microDist != 'undefined') {
         	this.#keyNum = args.keyNum;
-        	this.#microDist = 0; //args.microDist;
-
+        	this.#microDist = args.microDist;
             this.#frequency = this.#music.MicroFrequency(this.#keyNum, this.#microDist);
             this.#microId = this.#music.FrequencyToMicroId(this.#frequency);
             this.#midiNum = this.#music.FrequencyToMidiNum(this.#frequency);
 
+        /*
+        // todo: finish, needs conversion to frequency and midiNum
         } else if (typeof args.key != 'undefined') {
             // formats: A1, A#2, Ab3, A1.-1, A#1.0, Ab1.2
             // double sharps/flats not handled
@@ -118,18 +117,17 @@ export class MusicNote {
                 let accidental = result[2];
                 let octave = result[3];
                 let microDist = result[4] != null ? result[4] : '0';
-                // todo: finish, needs conversion to frequency and midiNum
             }
+        */
 		
 		} else {
-			throw('Incorrect arguments to Note constructor');
+			throw('MusicScale.js: MusicNote.constructor(): incorrect arguments');
 		}
 
         this.#octave = Music.Octave(this.#keyNum);
         this.#key = Music.KeyNumToKey(this.#keyNum);
 		this.#keyDown = Music.ToEntities(Music.KeyNumToScaleKey(this.#keyNum, false));
 		this.#keyUp = Music.ToEntities(Music.KeyNumToScaleKey(this.#keyNum, true));
-
         this.#isWhite = Music.KeyNumIsWhite(this.#keyNum);
 
         //this.#flatNote = (typeof args.flatNote != 'undefined' ? targs.flatNote : null);
@@ -177,8 +175,26 @@ export class MusicNote {
         return Music.Round(this.#frequency, parseInt(precision));
     }
 
-    clone(note) {
-        return new MusicNote(this.#music, { keyNum: note.KeyNum, microDist: note.MicroDist });
+    #getFields() {
+        return {
+            'music': this.#music,
+            'frequency': this.#frequency,
+            'microId': this.#microId,
+            'midiNum': this.#midiNum,
+            'microDist': this.#microDist,
+            'keyNum': this.#keyNum,
+            'octave': this.#octave,
+            'key': this.#key,
+            'keyDown': this.#keyDown,
+            'keyUp': this.#keyUp,
+            'isWhite': this.#isWhite,
+            //'flatNote': this.#flatNote,
+            //'sharpNote': this.#sharpNote,
+        };
+    }
+
+    clone() {
+        return new MusicNote(this.#music, this.#getFields(), false);
     }
 }
 

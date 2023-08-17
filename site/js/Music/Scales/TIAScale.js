@@ -55,12 +55,14 @@ export class TIANote extends MusicNote {
 	#mode = null;
 	#audc = 0;
 	#audf = 0;
-	#frequency = 0.0;
+	//#frequency = 0.0;
 	#cents = 0.0;
 
     #tones = [1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 14, 15];
     #allTones = Array(16).fill(0).map((e,i) => { return 15 - i });
     #allPitches = Array(32).fill(0).map((e,i) => { return 31 - i });
+
+    #nearestNote = null;
 
     constructor(music, args) {
         if (args.audc < 0 || args.audc >= 16)
@@ -69,29 +71,18 @@ export class TIANote extends MusicNote {
 			args.audf = 0;
 
         let tiaFrequency = ModeMap.ntsc.AudioFrequency / Divisors[args.audc] / (args.audf+1);
-		let mArgs = { frequency: tiaFrequency};
-
-        super(music, mArgs);
-
+        super(music, { frequency: tiaFrequency }, true);
 		this.#mode = args.mode;
         this.#audc = args.audc;
         this.#audf = args.audf;
-		this.#frequency = tiaFrequency;
-        this.#cents = Music.CentsBetween(super.Frequency, tiaFrequency);
+        this.#nearestNote = new MusicNote(super.Music, { keyNum: super.KeyNum, microDist: super.MicroDist });
+        this.#cents = Music.CentsBetween(this.#nearestNote.Frequency, tiaFrequency);
     }
 
 	get AUDC() { return this.#audc }
 	get AUDF() { return this.#audf }
-	get TIAFrequency() { return this.#frequency }
 	get Cents() { return this.#cents }
     get TIALabel() { return "" + this.AUDC + "/" + this.AUDF; }
-
-    getTIAFrequencyRounded(precision = null) {
-        if (precision === null)
-            return Music.Round(this.#frequency, super.Music.FrequencyPrecision);
-
-        return Music.Round(this.#frequency, parseInt(precision));
-    }
 
 	getCentsRounded(precision = null) {
         if (precision === null)
@@ -110,6 +101,10 @@ export class TIANote extends MusicNote {
             return 0.0;
 
         return this.#mode.AudioFrequency / Divisors[audc] / (audf+1);
+    }
+
+    getNearestMusicNote() {
+        return this.#nearestNote;
     }
 }
 
