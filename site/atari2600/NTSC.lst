@@ -521,7 +521,7 @@
     110  f079		       85 01		      sta	VBLANK
     111  f07b		       85 09		      sta	COLUBK
     112  f07d
-    113  f07d		       a2 57		      ldx	#[KERNEL_LINES/2 - 1] - NTSCGraphic_HEIGHT
+    113  f07d		       a2 58		      ldx	#[KERNEL_LINES/2] - NTSCGraphic_HEIGHT
     114  f07f				   .top
     115  f07f		       85 02		      sta	WSYNC
     116  f081		       ad 84 02 	      lda	INTIM
@@ -532,16 +532,16 @@
     121  f087		       a0 07		      ldy	#NTSCGraphic_HEIGHT-1
     122  f089		       20 00 fa 	      jsr	DrawGraphic
     123  f08c
-    124  f08c		       a2 5f		      ldx	#KERNEL_LINES/2 - 1
-    125  f08e		       85 02		      sta	WSYNC
-    126  f090				   .bot
+    124  f08c		       a2 60		      ldx	#KERNEL_LINES/2
+    125  f08e				   .bot
+    126  f08e		       85 02		      sta	WSYNC
     127  f090		       ad 84 02 	      lda	INTIM
     128  f093							;sta COLUBK
     129  f093		       ca		      dex
-    130  f094		       d0 fa		      bne	.bot
+    130  f094		       d0 f8		      bne	.bot
     131  f096
     132  f096							; Overscan
-    133  f096		       a9 24		      lda	#[OVERSCAN_LINES*76/64+1]	; convert lines to TIM64 cycles
+    133  f096		       a9 23		      lda	#[OVERSCAN_LINES*76/64]	; convert lines to TIM64 cycles
     134  f098		       8d 96 02 	      sta	TIM64T
     135  f09b		       a9 c0		      lda	#%11000000	; enable latches, enable blanking
     136  f09d		       85 02		      sta	WSYNC

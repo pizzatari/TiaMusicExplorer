@@ -110,7 +110,7 @@ Frame
     sta VBLANK
     sta COLUBK
 
-    ldx #[KERNEL_LINES/2 - 1] - NTSCGraphic_HEIGHT
+    ldx #[KERNEL_LINES/2] - NTSCGraphic_HEIGHT
 .top
     sta WSYNC
     lda INTIM
@@ -121,16 +121,16 @@ Frame
     ldy #NTSCGraphic_HEIGHT-1
     jsr DrawGraphic
     
-    ldx #KERNEL_LINES/2 - 1
-    sta WSYNC
+    ldx #KERNEL_LINES/2
 .bot
+    sta WSYNC
     lda INTIM
     ;sta COLUBK
     dex
     bne .bot
     
     ; Overscan
-    lda #[OVERSCAN_LINES*76/64+1]     ; convert lines to TIM64 cycles
+    lda #[OVERSCAN_LINES*76/64]     ; convert lines to TIM64 cycles
     sta TIM64T
     lda #%11000000      ; enable latches, enable blanking
     sta WSYNC
