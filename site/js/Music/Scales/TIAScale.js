@@ -55,7 +55,6 @@ export class TIANote extends MusicNote {
 	#mode = null;
 	#audc = 0;
 	#audf = 0;
-	//#frequency = 0.0;
 	#cents = 0.0;
 
     #tones = [1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 14, 15];
@@ -70,7 +69,7 @@ export class TIANote extends MusicNote {
  		if (args.audf < 0 || args.audf >= 32)
 			args.audf = 0;
 
-        let tiaFrequency = ModeMap.ntsc.AudioFrequency / Divisors[args.audc] / (args.audf+1);
+        let tiaFrequency = args.mode.AudioFrequency / Divisors[args.audc] / (args.audf+1);
         super(music, { frequency: tiaFrequency }, true);
 		this.#mode = args.mode;
         this.#audc = args.audc;
@@ -128,9 +127,13 @@ export class TIAScale extends MusicScale {
 	}
 
     getNoteList() {
+        let args = { 'mode': this.#mode, 'audc': this.AUDC, 'audf': 0 };
+
+        //console.notice(console.stream.tia, "getNoteList " + this.
         let ary = [];
         for (let audf = 31; audf >= 0; audf--) {
-			let args = { 'mode': this.#mode, 'audc': this.AUDC, 'audf': audf };
+			args.audf = audf;
+
             let note = new TIANote(super.Music, args);
             ary.push(note);
         }

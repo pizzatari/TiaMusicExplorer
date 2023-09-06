@@ -70,13 +70,25 @@ fieldset > legend {
     float:none;
     clear:none;
 }
+.panel #VolumeRangeId {
+    margin-top:3px;
+    width:200px;
+}
+.panel #VolumeId {
+    width:50px;
+    clear:none;
+}
 
-#MidiId .group {
+#SynthId.disabled * {
+    color:#777;
+    user-select:none;
+}
+#SynthId .group {
     float:left;
     vertical-align:top;
     clear:none;
 }
-#MidiId p.group {
+#SynthId p.group {
     display:block;;
     float:left;
     width:175px;
@@ -106,44 +118,41 @@ input#PolyphonyId { width:3em; }
     border-color:#ccc #333 #000 #ccc;
 }
 .piano span.white {
-    color:#555;
-    background-color:hsl(235deg,40%,75%);
+    color:#000;
+    /*background-color:hsl(235deg,40%,75%);*/
+    /*background-color:hsl(220deg,30%,50%);*/
+    background-color:hsl(240deg,5%,60%);
     background-image:none;
 }
 .piano span.black {
-    color:#333;
-    background-color:hsl(235deg,40%,65%);
+    color:#fff;
+    background-color:hsl(240deg,5%,50%);
     background-image:none;
 }
-.piano span.white.paired-flat {
+
+.piano tr.paired-gradient td {
+    color:inherit;
+    background-color:inherit;
+}
+
+.piano tr.white.paired-flat,
+.piano tr.white.paired-flat td,
+.piano .key span.white.paired-flat {
     color:#000;
     background-color:#fff;
 }
-.piano span.black.paired-flat {
+.piano tr.black.paired-flat,
+.piano tr.black.paired-flat td,
+.piano .key span.black.paired-flat {
     color:#fff;
     background-color:#000;
 }
-.piano .paired-gradient td,
-.piano .paired-gradient span {
-    color:inherit !important;
-    background-color:inherit !important;
-}
 
-#VPiano tr.hidden {
-    /*
-    visibility:collapse;
-    width:0;
-    height:0;
-    margin:0;
-    padding:0;
-    */
-}
-
-#VPiano td.key {
+.piano td.key {
     width:120px;
     text-align:right;
 }
-#VPiano span {
+.piano td.key span {
     display:inline-block;
     height:100%;
     width:100%;
@@ -154,82 +163,52 @@ input#PolyphonyId { width:3em; }
 #VPiano tr.hidden {
     visibility:collapse;
 }
+#VPiano tr.hidden td { text-align:right }
 #VPiano tr.hidden span.black {
     visibility:visible;
     position:relative;
     width:80px;
     height:24px;
     top:-3px;
-    right:0;
+    right:-10p;
     z-index:10;
     padding:0px 4px;
     border-radius:6px 0 0 6px;
-    text-align:left;
 }
-
-/*
-    background-image:linear-gradient(#ffc, #bbf, #ffc);
-    background-image:linear-gradient(#000, #555, #000);
-*/
-/*
-.piano span.white.paired-gradient {
-    color:#000;
-    background-color:#fff;
-}
-*/
 .piano th {
     border-bottom:1px solid black;
     border-right:1px solid black;
     background-color:#bbf;
 }
-/*.piano td { box-sizing:border-box }*/
-
-#HPiano span:hover {
-    background-color:hsl(235deg,40%,90%);
-    border:1px solid red;
-    background-image:none;
-}
-
-#VPiano td {
+.piano td {
     border:1px solid;
     border-color:#fff #aaa transparent #fff;
     background-color:#ccc;
 }
-#VPiano tr:hover td {
-    border-color:red #aaa red #fff;
-}
-
-/*
-#VPiano tr:hover td {
+.piano tr:hover td { border-color:red #aaa red #fff }
+.piano span:hover {
     color:#000;
     background-color:hsl(235deg,40%,90%);
-    background-image:none;
-    border:solid red;
-}
-#VPiano tr:hover span {
-    background-color:hsl(235deg,40%,90%);
-    background-image:none !important;
-}
-*/
-
-/*
-.piano span:hover {
     border:1px solid red;
-    background-color:#bbd;
     background-image:none;
+    filter:invert(75%);
 }
-*/
 
-.key-on {
+#HPiano .piano span.key-on,
+#VPiano .piano span.key-on {
     color:#000 !important;
     background-color:#9f9 !important;
     background-image:none !important;
+    filter:none !important;
 }
-.key-off { }
-.key-error {
+#HPiano .piano .key-off,
+#VPiano .piano .key-off { }
+#HPiano .piano .key-error,
+#VPiano .piano .key-error {
     color:#000 !important;
     background-color:#f96 !important;
     background-image:none !important;
+    filter:none !important;
 }
 
 span.ok { color:green; }
@@ -293,17 +272,15 @@ span.error {
 }
 #VPiano sub {
     font-size:0.8em;
-    vertical-align:middle;
+    /*vertical-align:middle;*/
 }
 #VPiano span {
     vertical-align:top;
     line-height:20px;
 }
-/*
-#VPiano td:not(.key) {
-    border-bottom:1px solid black;
-    border-right:1px solid black;
-}
-*/
 
 /* miscellaneous */
+/*
+    background-image:linear-gradient(#ffc, #bbf, #ffc);
+    background-image:linear-gradient(#000, #555, #000);
+*/

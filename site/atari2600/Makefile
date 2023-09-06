@@ -3,6 +3,7 @@ FIND		= find
 CHMOD		= chmod 
 MKDIR		= mkdir
 RMDIR		= rmdir
+MD5SUM		= md5sum
 PERL		= perl
 MAKE_SPRITE = ./make-big-sprite
 
@@ -23,6 +24,8 @@ NTSC.bin PAL.bin: include/vcs.h include/macro.h graphics.sp cart.asm
 	$(ASM) cart.asm $(ASM_FLAGS) -l$(TMP_DIR)/NTSC.lst -s$(TMP_DIR)/NTSC.sym -oNTSC.bin -DVIDEO_MODE=1
 	$(ASM) cart.asm $(ASM_FLAGS) -l$(TMP_DIR)/PAL.lst -s$(TMP_DIR)/PAL.sym -oPAL.bin -DVIDEO_MODE=2
 	$(CHMOD) ug+x *.bin
+	$(MD5SUM) -b --tag NTSC.bin > NTSC.md5
+	$(MD5SUM) -b --tag PAL.bin > PAL.md5
 
 %.sp: %.sprite $<
 	echo $(PERL) $(MAKE_SPRITE) "$<" -o"$@" -H1

@@ -3,21 +3,16 @@
 <head>
 <script>
     var appVers = "0.1";
-    window.jt = {};     // for javatari
+    window.jt = {};     // namespace for javatari
 </script>
+
 <base href="../0.1/">
-
 <title>Atari 2600 Music Explorer</title>
+<script src="./js/UI/Logger.js"></script>
 
-<!--
-<link href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" rel="stylesheet">
-<script src="https://code.jquery.com/jquery-3.6.4.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
-<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js" integrity="sha256-lSjKY0/srUM9BE3dPm+c4fBo1dky2v27Gdjm2uoZaL0=" crossorigin="anonymous"></script>
--->
-
-<link href="jquery/code.jquery.com_ui_1.13.2_themes_base_jquery-ui.css" rel="stylesheet">
-<script src="jquery/code.jquery.com_jquery-3.6.4.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
-<script src="jquery/code.jquery.com_ui_1.13.2_jquery-ui.min.js" integrity="sha256-lSjKY0/srUM9BE3dPm+c4fBo1dky2v27Gdjm2uoZaL0=" crossorigin="anonymous"></script>
+<link href="./jquery/code.jquery.com_ui_1.13.2_themes_base_jquery-ui.css" rel="stylesheet">
+<script src="./jquery/code.jquery.com_jquery-3.6.4.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+<script src="./jquery/code.jquery.com_ui_1.13.2_jquery-ui.min.js" integrity="sha256-lSjKY0/srUM9BE3dPm+c4fBo1dky2v27Gdjm2uoZaL0=" crossorigin="anonymous"></script>
 
 <link href="./css/index.css" rel="stylesheet">
 <link href="./css/background.css" rel="stylesheet">
@@ -25,11 +20,8 @@
 
 <script type="module">
     import { Options } from "./js/Options.js";
-    import { NoteListBuilder } from "./js/Music/NoteListBuilder.js";
     import { Music } from "./js/Music/Music.js";
-    import { Synth, ToneInstrument} from "./js/Music/Synth.js";
-    import { PianoInstrument } from "./js/Music/Instruments/PianoInstrument.js";
-    import { TIAInstrument } from "./js/Music/Instruments/TIAInstrument.js";
+    import { Synth} from "./js/Music/Synth.js";
     import { MidiParser, MidiCC } from "./js/Music/Midi.js"
     import { PageUI } from "./js/UI/PageUI.js";
     import { PageController } from "./js/UI/PageController.js";
@@ -42,17 +34,28 @@
     $("#CenterTableId").tabs();
     $('#A4FrequencyId').focus();
 
+	let mainForm = document.querySelector('#MainFormId');
+
     let opts = new Options();
     opts.loadFromStorage();
-    opts.writeToForm();
+    opts.writeToForm(mainForm);
 
-    let pageController = new PageController(opts);
-    let synth = new Synth(new AudioContext(), pageController.Music);
-	let pageUI = pageController.PageUI;
+	let pageUI = new PageUI(opts, mainForm);
+    let pageController = new PageController(opts, pageUI);
+
+	let instrumentArgs = {
+		audc: opts.getAtariTone(0),
+		mode: opts.VideoFormat,
+	};
+    let synth = new Synth(new AudioContext(), pageController.Music, instrumentArgs);
 
     if (synth.AudioContext.state == 'running') {
         pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
         pageController.addSynth(synth);
+		pageUI.enableSynth();
+		pageController.enableInstrument(opts.Instrument);
+		//pageController.Synth.MasterVolume = pageUI.MasterVolume / pageUI.MaxVolume;
+
     } else if (synth.AudioContext.state == 'suspended') {
         pageUI.log('Web Audio: waiting for mouse click to enable.');
     } else {
@@ -65,12 +68,16 @@
             (evt) => {
                 synth.AudioContext.resume();
                 pageController.addSynth(synth);
+				pageUI.enableSynth();
+				pageController.enableInstrument(opts.Instrument);
+				//pageController.Synth.MasterVolume = pageUI.MasterVolume / pageUI.MaxVolume;
                 pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
             },
             { once: true }
         );
     }
 
+	// enable MIDI support
     let midi = null;
     let midiOpts = { software: true };
     navigator.requestMIDIAccess(midiOpts).then(
@@ -85,67 +92,23 @@
         }
     );
 
-/*
-	let audioCtx = new AudioContext();
+	document.addEventListener("DOMContentLoaded", function(){
+		const customRoms = {
+			'A269BA047523F64EC51E92C7072DFD73': { n: 'Atari Music Explorer NTSC', l: 'NTSC 60 Hz' },
+			'04C6B72CF00DF91B0890EA96FAED0BCA': { n: 'Atari Music Explorer PAL',  l: 'PAL 50 Hz' }
+		};
 
-	let fundamental = audioCtx.createOscillator();
-	let overtone1 = audioCtx.createOscillator();
-	let overtone2 = audioCtx.createOscillator();
-	let overtone3 = audioCtx.createOscillator();
+		for (let md5 in customRoms) {
+			jt.CartridgeDatabase[md5] = customRoms[md5];
+			console.notice(console.stream.index, "adding custom ROM '" + customRoms[md5].n + "' to cart database");
+		}
 
-	let overtone1Gain = audioCtx.createGain();
-	let overtone2Gain = audioCtx.createGain();
-	let overtone3Gain = audioCtx.createGain();
-	let masterGain = audioCtx.createGain();
+		// override static selection
+		pageUI.loadCartridge(opts.CartridgeURL);
 
-	fundamental.frequency.value = 440;
-	overtone1.frequency.value = 880;
-	overtone2.frequency.value = 1320;
-	overtone3.frequency.value = 1760;
-
-	overtone1Gain.gain.value = 0.1;
-	overtone2Gain.gain.value = 0.2;
-	overtone3Gain.gain.value = 0.5
-	masterGain.gain.value = 0.3;
-
-	fundamental.connect(masterGain);
-	overtone1.connect(overtone1Gain);
-	overtone2.connect(overtone2Gain);
-	overtone3.connect(overtone3Gain);
-	overtone1Gain.connect(masterGain);
-	overtone2Gain.connect(masterGain);
-	overtone3Gain.connect(masterGain);
-	masterGain.connect(audioCtx.destination);
-
-	fundamental.start(0);
-	overtone1.start(0);
-	overtone2.start(0);
-	overtone3.start(0);
-
-	//
-	const realAry = [1, 0.5, 0, 0];
-	const imagAry = [0, 0, 0.5, 1];
-
-	const real = new Float32Array(2);
-	const imag = new Float32Array(2);
-	const ac = new AudioContext();
-	const osc = ac.createOscillator();
-
-	for (let i = 0; i < realAry.length; i++) {
-	real[i] = realAry[i];
-	imag[i] = imagAry[i];
-	}
-
-	const wave = ac.createPeriodicWave(real, imag, { disableNormalization: true });
-
-	osc.setPeriodicWave(wave);
-
-	osc.connect(ac.destination);
-
-	osc.start();
-	osc.stop(5);
-*/
-
+		for (let i of synth.Instruments)
+			console.notice(console.stream.index, "instrument: " + i.Name + ", Polyphony=" + i.Polyphony + " Volume=" + i.Volume);
+	});
 </script>
 </head>
 
@@ -258,7 +221,7 @@
 
             <fieldset class="result"><legend>Result Options</legend>
               <div class="collapsible">
-                <input type="checkbox" id="TuningGradientId" class="frm" name="TuningGradientId" value="Yes" checked>
+                <input type="checkbox" id="TuningGradientId" name="TuningGradient" class="frm" value="Yes" checked>
                 <label for="TuningGradientId" title="Show cent deviation as a color gradient">Gradient</label>
 
                 <input type="checkbox" id="PrintBlackKeysId" class="frm" name="PrintBlackKeys" value="Yes">
@@ -275,10 +238,11 @@
                 <input type="checkbox" id="ExpandPianoId" name="ExpandPiano" value="Yes" class="frm">
                 <label for="ExpandPianoId" title="Expand piano to include out of range Atari notes">Expand</label>
                 -->
-                <input type="checkbox" id="ShrinkPianoId" class="frm" name="ShrinkPiano" value="Yes">
-                <label for="ShrinkPianoId" title="Shrink piano to fit to Atari note range">Shrink</label>
 
-                <input type="checkbox" id="JumpToFirstId" class="frm" name="JumpToFirst" value="Yes">
+                <input type="checkbox" id="StretchPianoId" class="frm" name="StretchPiano" value="Yes">
+                <label for="StretchPianoId" title="Stretch to fit to note range">Stretch</label>
+
+                <input type="checkbox" id="JumpToFirstId" name="JumpToFirst" class="frm" value="Yes">
                 <label for="JumpToFirstId" title="Scroll to the first Atari note">Scroll</label>
 
                 <!--
@@ -304,16 +268,16 @@
             </fieldset>
             -->
 
-            <fieldset id="MidiId"><legend>Synthesizer</legend>
+            <fieldset id="SynthId" class="disabled"><legend>Synthesizer</legend>
               <div class="collapsible">
                 <div class="group"><label for="InstrumentId">Instrument</label>
-                  <select id="InstrumentId" size="6">
+                  <select id="InstrumentId" name="Instrument" size="6">
                     <option value="Piano">Piano</option>
                     <option value="TIA">Atari TIA</option>
-                    <option value="ToneSine">Tone (sine)</option>
-                    <option value="ToneSawtooth">Tone (sawtooth)</option>
-                    <option value="ToneTriangle">Tone (triangle)</option>
-                    <option value="ToneSquare">Tone (square)</option>
+                    <option value="triangle">Tone - triangle</option>
+                    <option value="square">Tone - square</option>
+                    <option value="sawtooth">Tone - sawtooth</option>
+                    <option value="sine">Tone - sine</option>
                   </select>
                 </div>
 
@@ -327,7 +291,7 @@
 
                 <div class="group">
                   <label for="PolyphonyId">Polyphony</label>
-                  <input type="number" id="PolyphonyId" class="frm" name="Polyphony" value="16" min="1" max="16" maxlength="3">
+                  <input type="number" id="PolyphonyId" name="Polyphony" class="frm" value="16" min="1" max="16" maxlength="3">
                 </div>
                 
                 <div class="group">
@@ -338,8 +302,9 @@
                 <p class="group">Note: TIA instrument cannot play Piano note scale.</p>
                 
                 <div class="group">
-                  <label for="VolumeId">Volume -/+</label>
-                  <input type="range" id="VolumeId" name="Volume" value="64" min="0" max="127" class="frm">
+                  <label for="VolumeRangeId">Volume -/+</label>
+                  <input type="range" id="VolumeRangeId" name="VolumeRange" class="frm" value="64" min="0" max="127">
+                  <input type="number" id="VolumeId" name="Volume" class="frm" value="64" min="0" max="127" maxlength="3">
                 </div>
 
                 <div id="MidiInputGroup" class="group">
@@ -505,8 +470,23 @@ title="Same as above, but as absolute value."></canvas>
 </main>
 
 <!-- Javatari emulator --> 
-<script src="javatari.js/release/stable/5.0/embedded/javatari.js"></script>
-<script>Javatari.CARTRIDGE_URL = "atari2600/NTSC.bin"</script>
+<script src="./javatari.js/release/stable/5.0/embedded/javatari.js"></script>
+
+<!-- Javatari options --> 
+<script>
+Javatari.CARTRIDGE_URL = "./atari2600/NTSC.bin";
+Javatari.ALLOW_URL_PARAMETERS = false;
+Javatari.SCREEN_CONSOLE_PANEL_DISABLED = true;
+Javatari.CARTRIDGE_CHANGE_DISABLED = true;
+Javatari.SCREEN_DEFAULT_SCALE = 1;
+
+if (!console.stream.jt.enabled) {
+	window.jt.Util.log = () => { };
+	window.jt.Util.warning = () => { };
+	window.jt.Util.error = () => { };
+	window.jt.Util.message = () => { };
+}
+</script>
 
 </body>
 </html>

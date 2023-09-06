@@ -1,4 +1,10 @@
-export class Options { #fields = {};
+const CART_URLS = {
+    ntsc: './atari2600/NTSC.bin',
+    pal: './atari2600/PAL.bin',
+};
+
+export class Options {
+    #fields = {};
 
     constructor() {
         this.loadDefaults();
@@ -17,7 +23,7 @@ export class Options { #fields = {};
         this.#fields.PrintBlackKeys = false;
         this.#fields.PrintGeometry = true;
         this.#fields.PrintFrequency = true;
-        this.#fields.ShrinkPiano = false;
+        this.#fields.StretchPiano = false;
         this.#fields.ExpandPiano = false;
         this.#fields.JumpToFirst = false;
         this.#fields.InnerJoin = false;
@@ -64,8 +70,8 @@ export class Options { #fields = {};
     set PrintGeometry(val) { this.#fields.PrintGeometry = val }
     get PrintFrequency() { return this.#fields.PrintFrequency }
     set PrintFrequency(val) { this.#fields.PrintFrequency = val }
-    get ShrinkPiano() { return this.#fields.ShrinkPiano }
-    set ShrinkPiano(val) { this.#fields.ShrinkPiano = val }
+    get StretchPiano() { return this.#fields.StretchPiano }
+    set StretchPiano(val) { this.#fields.StretchPiano = val }
     get JumpToFirst() { return this.#fields.JumpToFirst }
     set JumpToFirst(val) { this.#fields.JumpToFirst = val }
 
@@ -81,6 +87,7 @@ export class Options { #fields = {};
     set Velocity(val) { this.#fields.Volume = val }
 
     // non form values
+    get CartridgeURL() { return CART_URLS[this.#fields.VideoFormat] }
     get FrequencyPrecision() { return this.#fields.FrequencyPrecision }
     get CentPrecision() { return this.#fields.CentPrecision }
     get FirstPianoKey() { return this.#fields.FirstPianoKey }
@@ -92,7 +99,7 @@ export class Options { #fields = {};
     set LastPianoKey(val) { this.#fields.LastPianoKey = val }
     set FirstPianoOctave(val) { this.#fields.FirstPianoOctave = val }
 
-    readFromForm() {
+    readFromForm(formElem) {
         this.#fields.AtariTones.length = 0;
         this.#fields.AtariTones.push(parseInt(document.querySelector('#AtariTone0Id').value));
 
@@ -115,7 +122,7 @@ export class Options { #fields = {};
         this.#fields.PrintBlackKeys = document.querySelector('#PrintBlackKeysId').checked;
         //this.#fields.PrintGeometry = document.querySelector('#PrintGeometryId').checked;
         //this.#fields.PrintFrequency = document.querySelector('#PrintFrequencyId').checked;
-        this.#fields.ShrinkPiano = document.querySelector('#ShrinkPianoId').checked;
+        this.#fields.StretchPiano = document.querySelector('#StretchPianoId').checked;
         //this.#fields.ExpandPiano = document.querySelector('#ExpandPianoId').checked;
         this.#fields.JumpToFirst = document.querySelector('#JumpToFirstId').checked;
         //this.#fields.InnerJoin = document.querySelector('#InnerJoinId').checked;
@@ -127,7 +134,7 @@ export class Options { #fields = {};
         this.#fields.Velocity = document.querySelector('#VelocityId').checked;
     }
 
-    writeToForm() {
+    writeToForm(formElem) {
         document.querySelector('#VideoFormatId').value = this.#fields.VideoFormat;
         document.querySelector('#AtariTone0Id').value = this.#fields.AtariTones[0];
         document.querySelector('#AtariTone1Id').value = this.#fields.AtariTones[1];
@@ -146,13 +153,14 @@ export class Options { #fields = {};
         document.querySelector('#PrintBlackKeysId').checked = this.#fields.PrintBlackKeys;
         //document.querySelector('#PrintGeometryId').checked = this.#fields.PrintGeometry;
         //document.querySelector('#PrintFrequencyId').checked = this.#fields.PrintFrequency;
-        document.querySelector('#ShrinkPianoId').checked = this.#fields.ShrinkPiano;
+        document.querySelector('#StretchPianoId').checked = this.#fields.StretchPiano;
         document.querySelector('#JumpToFirstId').checked = this.#fields.JumpToFirst;
         //document.querySelector('#InnerJoinId').checked = this.#fields.InnerJoin;
 
         document.querySelector('#InstrumentId').value = this.#fields.Instrument;
         document.querySelector('#ScaleId').value = this.#fields.Scale;
         document.querySelector('#VolumeId').value = this.#fields.Volume;
+        document.querySelector('#VolumeRangeId').value = this.#fields.Volume;
         document.querySelector('#PolyphonyId').value = this.#fields.Polyphony;
         document.querySelector('#VelocityId').checked = this.#fields.Velocity;
     }
@@ -192,5 +200,4 @@ export class Options { #fields = {};
             str += n + '=' + this.#fields[n] + "\n";
         return str;
     }
-
 }

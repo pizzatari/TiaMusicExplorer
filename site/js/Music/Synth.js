@@ -1,49 +1,132 @@
 import { NoteListBuilder } from  "./NoteListBuilder.js" 
 import { MusicScale, MusicNote } from "./Scales/MusicScale.js"
+import { SynthInstrument } from "./SynthInstrument.js"
+import { ToneInstrument } from "./Instruments/ToneInstrument.js"
+import { PianoInstrument } from "./Instruments/PianoInstrument.js"
+import { TIAInstrument } from "./Instruments/TIAInstrument.js"
 
 export class Synth {
-    #music = null;
     #audioCtx = null;
+    #music = null;
+	#instrumentArgs = null;
+
     #instruments = new Map();
+    #scales = new Map();
+
     #activeInstrument = null;
+    #activeScale = null;
+
     #masterVolume = 1.0;
 
-    constructor(audioContext, music) {
-        this.#music = music;
+	/* instrumentArgs { audc: [0-15] } */
+    constructor(audioContext, music, instrumentArgs = {}) {
         this.#audioCtx = audioContext;
-        this.restart();
-        console.log("Web Audio API initialized");
+        this.#music = music;
+		this.#instrumentArgs = instrumentArgs;
+
+		this.restart();
+
+        console.notice(console.stream.synth, "API initialized");
+        console.notice(console.stream.synth, "active instrument:" + this.ActiveInstrument.Name);
     }
 
-    get ActiveInstrument() { return this.#activeInstrument }
-    get MasterVolume() { return this.#masterVolume }
     get AudioContext() { return this.#audioCtx }
+    get Instruments() { return this.#instruments.values() }
+    get ActiveInstrument() { return this.#activeInstrument }
+
+    get MasterVolume() {
+        return this.#masterVolume;
+        //return this.ActiveInstrument.Volume;
+    }
+    set MasterVolume(vol) {
+        vol = Math.max(0.0, vol);
+        vol = Math.min(1.0, vol);
+        this.#masterVolume = vol;
+        this.#activeInstrument.Volume = vol;
+    }
+
+    /*
+    get MasterVolume() {
+        return this.#masterVolume
+    }
+    set MasterVolume(vol) {
+        this.#masterVolume = vol;
+        this.#activeInstrument.Volume = vol;
+    }
+    */
 
     restart() {
-        let noteList = NoteListBuilder.getPianoNotes(this.#music);
-        let toneInstrument = new ToneInstrument(this.#audioCtx, noteList);
-        this.addInstrument(toneInstrument);
-        this.#activeInstrument = toneInstrument;
+		for (let [name, instrument] of this.#instruments)
+			instrument.disable();
+
+		this.#instruments.clear()
+		this.#scales.clear()
+
+        let pianoNotes = NoteListBuilder.getPianoNotes(this.#music);
+    	let tiaList = NoteListBuilder.getTIANotes(this.#music, this.#instrumentArgs);
+
+        let tone = new ToneInstrument(this.#audioCtx, pianoNotes);
+    	let piano = new PianoInstrument(this.#audioCtx, pianoNotes);
+    	let tia = new TIAInstrument(tiaList);
+
+        this.addInstrument(tone);
+    	this.addInstrument(piano);
+    	this.addInstrument(tia);
+
+        this.#activeInstrument = tone;
         this.#activeInstrument.enable();
+        this.#activeInstrument.Volume = this.#masterVolume;
     }
 
     addInstrument(instrument) {
         if (this.#instruments.has(instrument.Name)) {
+            console.notice(console.stream.synth, "replacing " + instrument.Name);
             let currInstrument = this.#instruments.get(instrument.Name);
             currInstrument.disable();
         }
         this.#instruments.set(instrument.Name, instrument);
     }
 
-    enable(name) {
+    enableInstrument(name) {
         let instrument = this.#instruments.get(name);
         if (instrument != null) {
+            console.notice(console.stream.synth, "enabling instrument " + name);
+
             if (!instrument.equals(this.#activeInstrument))
                 this.#activeInstrument.disable();
 
             this.#activeInstrument = instrument;
             this.#activeInstrument.enable();
-            this.#activeInstrument.Volume = this.MasterVolume;
+            this.#activeInstrument.Volume = this.#masterVolume;
+        } else {
+            console.notice(console.stream.synth, "instrument not found: " + name);
+        }
+    }
+
+    addScale(scale) {
+        if (this.#scales.has(scale.Name)) {
+            console.notice(console.stream.synth, "replacing scale " + scale.Name);
+            let currScale = this.#scales.get(scale.Name);
+            currScale.disable();
+        }
+        this.#scales.set(scale.Name, scale);
+    }
+
+    enableScale(name) {
+        let scale = this.#scales.get(name);
+        if (scale != null) {
+            console.notice(console.stream.synth, "enabling scale " + name);
+
+            if (!scale.equals(this.#activeScale)) {
+                console.notice(console.stream.synth, "replacing active scale " + name);
+                this.#activeScale.disable();
+            }
+
+            this.#activeScale = scale;
+            this.#activeScale.enable();
+            this.#activeScale.Volume = this.MasterVolume;
+        } else {
+            console.notice(console.stream.synth, "scale not found: " + name);
         }
     }
 
@@ -68,28 +151,33 @@ export class Synth {
     }
 }
 
+/*
 export class SynthInstrument {
     #name = null;
     #volume = 1.0;
     #polyphony = 10;
+    #polyphonyLocked = false;
     #midiMap = new Map();   // midiNum -> Note
     #keyMap = new Map();    // keyNum -> Note
+    
+    #slotsFree = [];
+    #slotsActive = new Map();
 
-    constructor(name, noteList) {
+    constructor(name, noteList=null) {
         this.#name = name;
-        this.setNoteList(noteList);
+
+        if (noteList != null)
+            this.setNoteList(noteList);
     }
 
     setNoteList(noteList) {
-        this.disable();
         this.#midiMap.clear();
         this.#keyMap.clear();
         for (let note of noteList) {
-            let key = this.#key(note.MidiNum, note.MicroDist);
+            let key = this.Key(note.MidiNum, note.MicroDist);
             this.#midiMap.set(key, note);
             this.#keyMap.set(note.KeyNum, note);
         }
-        this.enable();
     }
 
     set Name(val) { this.#name = val }
@@ -100,19 +188,62 @@ export class SynthInstrument {
 
     get Polyphony() { return this.#polyphony }
     set Polyphony(val) {
-        if (val > 0 && val <= 16)
+        if (!this.#polyphonyLocked && val > 0 && val <= 16)
             this.#polyphony = val;
     }
+
+    set PolyphonyLocked(val) { this.#polyphonyLocked = true }
+    get PolyphonyLocked() { return this.#polyphonyLocked }
 
     set MidiMap(map) { this.#midiMap = map }
     get MidiMap() { this.#midiMap = map }
 
+    set Slots(slotsAry) { this.#slotsFree = slotsAry }
+    get SlotsPlaying() { return this.#slotsActive }
+
     getNote(midiNum, microDist = 0) {
-        let key = this.#key(midiNum, microDist);
-        return this.#midiMap.get(key);
+        let key = this.Key(midiNum, microDist);
+        let note = this.#midiMap.get(key);
+        return typeof note == 'undefined' ? null : note;
     }
 
-    #key(midiNum, microDist) {
+    getSlot(id) {
+        if (this.#slotsFree.length > 0) {
+            let slot = this.#slotsFree.pop();
+            this.#slotsActive.set(id, slot);
+            return slot;
+        }
+
+        return null;
+    }
+
+    getActiveSlot(id) {
+        let slot = this.#slotsActive.get(id);
+        return typeof slot != 'undefined' ? slot : null;
+    }
+
+    numSlotsFree() {
+        return this.#slotsFree.length;
+    }
+
+    freeSlot(id) {
+        if (this.#slotsActive.has(id)) {
+            let slot = this.#slotsActive.get(id);
+            this.#slotsFree.push(slot);
+            this.#slotsActive.delete(id);
+        }
+    }
+
+    freeAllSlots() {
+        for(let [id, slot] of this.#slotsActive) {
+            this.#slotsFree.push(slot);
+        }
+        this.#slotsActive.clear();
+        //this.#slotsFree.push(this.#slotsActive.values());
+        //this.#slotsActive.clear();
+    }   
+
+    Key(midiNum, microDist) {
         return midiNum + '_' + microDist;
     }
 
@@ -151,23 +282,17 @@ export class SynthInstrument {
     }
 }
 
+const ToneTypes = ['triangle', 'sine', 'square', 'sawtooth'];
+const ToneSet = new Set(ToneTypes);
+
 export class ToneInstrument extends SynthInstrument {
     #audioCtx = null;
 
-    #waveType = 'sine';   // 'sine', 'square', 'sawtooth', 'triangle', 'custom'
+    #waveType = ToneTypes[0];
     #frequency = 440.0;
 
-    // fundamental
     #audioNodes = [];       // { oscillator: node, oscillator2: node, gain: node }
     #playing = new Map();   // midi number -> audioNodes
-
-    // 2nd harmonic
-    #audioNodes2 = [];      // { oscillator: node, oscillator2: node, gain: node }
-    #playing2 = new Map();  // midi number -> audioNodes
-
-    // 3nd harmonic
-    #audioNodes3 = [];      // { oscillator: node, oscillator2: node, gain: node }
-    #playing3 = new Map();  // midi number -> audioNodes
 
     #sustainedNotes = new Map();
 
@@ -186,54 +311,52 @@ export class ToneInstrument extends SynthInstrument {
             node.oscillator.connect(node.gain);
             node.oscillator.start();
             this.#audioNodes.push(node);
-
-            let node2 = { oscillator: null, gain: null };
-            node2.gain = this.#audioCtx.createGain();
-            node2.gain.connect(this.#audioCtx.destination);
-            node2.gain.gain.setValueAtTime(0, this.#audioCtx.currentTime); // start muted
-            node2.oscillator = this.#audioCtx.createOscillator();
-            node2.oscillator.type = this.#waveType;
-            node2.oscillator.frequency.value = this.#frequency * 2;
-            node2.oscillator.connect(node2.gain);
-            node2.oscillator.start();
-            this.#audioNodes2.push(node2);
-
-            let node3 = { oscillator: null, gain: null };
-            node3.gain = this.#audioCtx.createGain();
-            node3.gain.connect(this.#audioCtx.destination);
-            node3.gain.gain.setValueAtTime(0, this.#audioCtx.currentTime); // start muted
-            node3.oscillator = this.#audioCtx.createOscillator();
-            node3.oscillator.type = this.#waveType;
-            node3.oscillator.frequency.value = this.#frequency * 3;
-            node3.oscillator.connect(node3.gain);
-            node3.oscillator.start();
-            this.#audioNodes3.push(node3);
         }
     }
 
     get State() { return this.#audioCtx.state }
 
+    getWaveType() { return this.#waveType }
+
+    setWaveType(type) {
+	    this.allNotesOff();
+        if (ToneSet.has(type)) {
+            console.notice(console.stream.synth, "enabling wave " + super.Name);
+
+		    for (let node of this.#audioNodes)
+                node.oscillator.type = type;
+        }
+    }
+
+    enable() {
+        console.notice(console.stream.synth, "enabling " + super.Name);
+    }
+
+    disable() {
+        console.notice(console.stream.synth, "disabling " + super.Name);
+    }
+
     noteOn(midiNote, microDist = 0, velocity = 1.0) {
         if (this.#audioNodes.length == 0) {
-            console.log('noteOn: polyphony exceeded: ' + midiNote + ' ' + microDist + ' ' + velocity);
+            console.notice(console.stream.synth, 'noteOn: polyphony exceeded: ' + midiNote + ' ' + microDist + ' ' + velocity);
             return null;
         }
 
         let note = this.getNote(midiNote, microDist);
         if (note == null) {
-            console.log('noteOn: note undefined: ' + midiNote + ' ' + microDist + ' ' + velocity);
+            console.notice(console.stream.synth, 'noteOn: note undefined: ' + midiNote + ' ' + microDist + ' ' + velocity);
             return null;
         }
 
         if (note.Frequency <= 0.0) {
-            console.log('noteOn: invalid frequency: ' + midiNote + ' ' + microDist + ' ' + velocity);
+            console.notice(console.stream.synth, 'noteOn: invalid frequency: ' + midiNote + ' ' + microDist + ' ' + velocity);
             return null;
         }
 
         let mapKey = this.mapKey(midiNote, microDist);
         let n = this.#playing.get(mapKey);
         if (n != null) {
-            console.log('noteOn: note currently playing: ' + midiNote + '.' + microDist);
+            console.notice(console.stream.synth, 'noteOn: note currently playing: ' + midiNote + '.' + microDist);
             return note;
         }
 
@@ -244,18 +367,9 @@ export class ToneInstrument extends SynthInstrument {
 
         let node = this.#audioNodes.shift();
         node.oscillator.frequency.setValueAtTime(note.Frequency, currentTime);
-        node.gain.gain.setTargetAtTime(effectiveVolume, currentTime, 0.005);
+        //node.gain.gain.setTargetAtTime(effectiveVolume, currentTime, 0.005);
+        node.gain.gain.setValueAtTime(effectiveVolume, currentTime);
         this.#playing.set(mapKey, node);
-
-        let node2 = this.#audioNodes2.shift();
-        node2.oscillator.frequency.setValueAtTime(note.Frequency * 3, currentTime);
-        //node2.gain.gain.setTargetAtTime(effectiveVolume/2, currentTime, 0.002);
-        this.#playing2.set(mapKey, node2);
-
-        let node3 = this.#audioNodes3.shift();
-        node3.oscillator.frequency.setValueAtTime(note.Frequency * 4, currentTime);
-        //node3.gain.gain.setTargetAtTime(effectiveVolume/3, currentTime, 0.001);
-        this.#playing3.set(mapKey, node3);
 
         return note;
     }
@@ -265,25 +379,11 @@ export class ToneInstrument extends SynthInstrument {
 
         let node = this.#playing.get(mapKey);
         if (node != null) {
-        	node.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.10);
+        	//node.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.10);
+            node.gain.gain.setValueAtTime(0, this.#audioCtx.currentTime);
         	this.#audioNodes.push(node);
         }
-
-        let node2 = this.#playing2.get(mapKey);
-        if (node2 != null) {
-        	node2.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.10);
-        	this.#audioNodes2.push(node2);
-        }
-
-        let node3 = this.#playing3.get(mapKey);
-        if (node3 != null) {
-        	node3.gain.gain.setTargetAtTime(0, this.#audioCtx.currentTime, 0.10);
-        	this.#audioNodes3.push(node3);
-        }
-
         this.#playing.delete(mapKey);
-        this.#playing2.delete(mapKey);
-        this.#playing3.delete(mapKey);
 
         return this.getNote(midiNote, microDist);
     }
@@ -293,24 +393,10 @@ export class ToneInstrument extends SynthInstrument {
 			this.#audioNodes.push(node);
 			this.#playing.delete(key);
 		}
-        for(let [key, node] of this.#playing2) {
-			this.#audioNodes2.push(node);
-			this.#playing2.delete(key);
-		}
-        for(let [key, node] of this.#playing3) {
-			this.#audioNodes3.push(node);
-			this.#playing3.delete(key);
-		}
 
 		// doing it this way otherwise nodes get put back into the free list while stuck on
 		let currentTime = this.#audioCtx.currentTime;
 		for (let node of this.#audioNodes) {
-        	node.gain.gain.setTargetAtTime(0, currentTime, 0.10);
-		}
-		for (let node of this.#audioNodes2) {
-        	node.gain.gain.setTargetAtTime(0, currentTime, 0.10);
-		}
-		for (let node of this.#audioNodes3) {
         	node.gain.gain.setTargetAtTime(0, currentTime, 0.10);
 		}
 	}
@@ -334,6 +420,7 @@ export class ToneInstrument extends SynthInstrument {
         return midiNote + "." + microDist;
     }
 }
+*/
         /*
         const realAry = [1, 0, 1, 0.5, 0, 0];
         const imagAry = [1, 0, 0, 0, 0.5, 1];

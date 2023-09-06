@@ -134,8 +134,8 @@ export class Music extends EventTarget {
     }
 
     equals(music) {
-        // account for differences in precision, so use the lowest precision.
-        let precision = Math.Min(this.FrequencyPrecision, music.FrequencyPrecision);
+        // account for differences in precision, so use the least precision.
+        let precision = Math.Max(this.FrequencyPrecision, music.FrequencyPrecision);
 
         if (this.A4KeyNum != music.A4KeyNum)
             return false;
@@ -154,17 +154,17 @@ export class Music extends EventTarget {
         return true;
     }
 
-    KeyNumFrequency(keyNum) {
-        // key distance from A4
-        let keyDistance = keyNum - this.A4KeyNum;
-        let exp = (keyDistance * 100 + this.CentTranspose) / 1200;
-        return 2**exp * this.A4Frequency;
-    }
-
     MicroFrequency(keyNum, microDist = 0) {
         // micro distance from A4
         let microDistance = (keyNum * this.NumMicroTones) - (this.A4KeyNum * this.NumMicroTones) + microDist;
         let exp = (microDistance * 100 + this.CentTranspose) / (1200 * this.NumMicroTones);
+        return 2**exp * this.A4Frequency;
+    }
+
+    KeyNumFrequency(keyNum) {
+        // key distance from A4
+        let keyDistance = keyNum - this.A4KeyNum;
+        let exp = (keyDistance * 100 + this.CentTranspose) / 1200;
         return 2**exp * this.A4Frequency;
     }
 
@@ -179,7 +179,8 @@ export class Music extends EventTarget {
     }
 
     FrequencyToKeyNum(freq) {
-        return Math.round(this.KeyDistance(Music.Transpose(this.A4Frequency,this.CentTranspose), freq) + this.A4KeyNum);
+        //return Math.round((this.KeyDistance(Music.Transpose(this.A4Frequency,this.CentTranspose), freq) + this.A4KeyNum);
+        return Math.floor(this.FrequencyToMicroId(freq) / this.NumMicroTones);
     }
 
     FrequencyToMidiNum(freq) {
@@ -277,8 +278,10 @@ export class Music extends EventTarget {
 
     // replace ASCII notations with HTML entities
     static ToEntities(textString) {
-        if (textString == null)
-            console.log("textString null");
+        if (textString == null) {
+            console.log("textString is null");
+            return null;
+        }
 
         for(let key in MusicEntities) {
             textString = textString.replace(key, MusicEntities[key]);
@@ -287,8 +290,7 @@ export class Music extends EventTarget {
     }
 
     static Round(num, precision) {
-        return Math.round(num * (10**precision)) / (10**precision);
-        //return num.toFixed(precision);
+        return num.toFixed(precision);
     }
 
     // modulo that works with negative numbers (javascript % does not)
@@ -298,7 +300,7 @@ export class Music extends EventTarget {
         // my version
         //return num - (Math.floor(num / modulus) * modulus);
 
-        // this version should be faster if % has O(1) complexity
+        // this version should be faster
         return ((num % modulus) + modulus) % modulus;
     }
 

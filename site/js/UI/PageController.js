@@ -15,12 +15,16 @@ export class PageController {
     #midiParser = null;
 
 	#noteTable = null;
+    #tiaNotes = null;
+    #pianoNotes = null;
 
-    constructor(opts) {
+    constructor(opts, pageUI) {
         this.#opts = opts;
-        this.#pageUI = new PageUI(opts);
+        this.#pageUI = pageUI;
     	this.#music = this.getMusic(opts);
-		this.#pageForm = new PageForm(opts, this.#music, this.#pageUI.MainForm);
+
+        this.#pageUI.updateScale(opts.Scale);
+		this.#pageForm = new PageForm(opts, this, this.#pageUI.MainForm);
 		this.#updateNoteTables();
 
 		this.#pageForm.addEventListener("fullupdate", (e) => {
@@ -44,8 +48,10 @@ export class PageController {
 	get Synth() { return this.#synth }
 	get NoteTable() { return this.#noteTable }
 
-    addSynth(s) {
-        this.#synth = s;
+    addSynth(synth) {
+        this.#synth = synth;
+        this.#pageUI.Polyphony = synth.ActiveInstrument.Polyphony;
+
         this.#setHPianoHandlers();
         this.#setVPianoHandlers();
     }
@@ -66,6 +72,29 @@ export class PageController {
         this.#midiParser = new MidiParser();
     }
 
+    enableInstrument(instrument) {
+        if (this.Synth == null)
+            return;
+
+        if (instrument == 'TIA') {
+            this.Synth.enableInstrument(instrument);
+            this.PageUI.disableScale('TIA');
+            this.PageUI.disablePolyphony();
+        } else if (instrument == 'Piano') {
+            this.Synth.enableInstrument(instrument);
+            this.PageUI.enableScale(this.#opts.Scale);
+            this.PageUI.enablePolyphony();
+        } else { // tone instrument
+            this.Synth.enableInstrument('Tone');
+            this.Synth.ActiveInstrument.setWaveType(instrument);
+            this.PageUI.enableScale(this.#opts.Scale);
+            this.PageUI.enablePolyphony();
+        }
+
+        this.PageUI.MainForm.elements['Polyphony'].value = this.Synth.ActiveInstrument.Polyphony;
+        this.Synth.MasterVolume = this.PageUI.MasterVolume / this.PageUI.MaxVolume;
+    }
+
 	getMusic(opts) {
 		let music = new Music();
     	music.A4Frequency = opts.A4Frequency;
@@ -77,24 +106,41 @@ export class PageController {
 	}
 
 	#updateNoteTables() {
-    	let tiaArgs = { audc: this.#opts.getAtariTone(0) };
-    	let pianoNotes = NoteListBuilder.getPianoNotes(this.#music);
-    	let tiaNotes = NoteListBuilder.getTIANotes(this.#music, tiaArgs);
-    	this.#noteTable = NoteListBuilder.getNoteTable(pianoNotes, tiaNotes);
-    	this.#pageUI.updateNoteTables(this.#noteTable);
+        console.log("PageController ");
+        console.log(this.#opts);
+        console.log(this.#music);
+
+    	this.#pianoNotes = NoteListBuilder.getPianoNotes(this.#music);
+    	this.#tiaNotes = NoteListBuilder.getTIANotes(this.#music, {
+            audc: this.#opts.getAtariTone(0),
+            mode: this.#opts.VideoFormat
+        });
+
+    	this.#noteTable = NoteListBuilder.getNoteTable(this.#pianoNotes, this.#tiaNotes);
+    	this.#pageUI.updatePianos(this.#noteTable);
+
         this.#setHPianoHandlers();
         this.#setVPianoHandlers();
 	}
 
     #updateSynth() {
-		this.#synth.restart();
+        let instruments = this.#synth.Instruments;
+        for (let inst of instruments) {
+            if (inst.Name == 'TIA')
+                inst.setNoteList(this.#tiaNotes);
+            else
+                inst.setNoteList(this.#pianoNotes);
+        }
 	}
 
     #refreshMidiPorts() {
-        console.log("Found " + this.#midi.inputs.size + " midi inputs");
+        if (this.#midi.inputs.size == 0)
+            console.notice(console.stream.midi, "found no midi inputs");
+
         this.#pageUI.clearMidiLists();
         for (let [id, input] of this.#midi.inputs) {
             this.#pageUI.addMidiInput(input.id, input.name, input.manufacturer, input.version);
+            console.notice(console.stream.midi, "found input " + [input.id, input.name, input.manufacturer, input.version].join(" "));
         }
     }
 
@@ -105,37 +151,53 @@ export class PageController {
         for (var i=0; i < piano.childNodes.length; i++) {
             let key = piano.childNodes[i].childNodes[0];
 
-            if (typeof key != 'undefined') {
-                let midiNum = key.getAttribute('midinum');
-                let microDist = key.getAttribute('microDist');
-
-                key.addEventListener("mousedown", (e) => {
-                    if (e.buttons & 1) {
-                        this.#synth.ActiveInstrument.allNotesOff();
-                        this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
-                        this.#pageUI.updateKeyStatus(midiNum, microDist, 'on');
-                    }
-                });
-                key.addEventListener("mouseenter", (e) => {
-                    if (e.buttons & 1) {
-                        this.#synth.ActiveInstrument.allNotesOff();
-                        this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
-                        this.#pageUI.updateKeyStatus(midiNum, microDist, 'on');
-                    }
-                });
-                key.addEventListener("mouseup", (e) => {
-                    //this.#synth.ActiveInstrument.noteOff(midiNum, microDist);
-                    this.#synth.ActiveInstrument.allNotesOff();
-                    this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
-                });
-                key.addEventListener("mouseleave", (e) => {
-                    //this.#synth.ActiveInstrument.noteOff(midiNum, microDist);
-                    this.#synth.ActiveInstrument.allNotesOff();
-                    this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
-                });
-            } else {
+            if (typeof key == 'undefined') {
                 console.log("setHPianoHandlers: key undefined");
+                continue;
             }
+
+            let midiNum = key.getAttribute('midinum');
+            let microDist = key.getAttribute('microDist');
+            let excluded = key.getAttribute('excluded');
+
+            key.addEventListener("mousedown", (e) => {
+                if (e.buttons & 1) {
+                    let result = 'error';
+
+                    this.#synth.ActiveInstrument.allNotesOff();
+                    if (excluded != 'yes') {
+                        let note = this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
+                        if (note != null)
+                            result = 'on';
+                    }
+
+                    this.#pageUI.updateKeyStatus(midiNum, microDist, result);
+                }
+            });
+            key.addEventListener("mouseenter", (e) => {
+                if (e.buttons & 1) {
+                    let result = 'error';
+
+                    this.#synth.ActiveInstrument.allNotesOff();
+                    if (excluded != 'yes') {
+                        let note = this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
+                        if (note != null)
+                            result = 'on';
+                    }
+
+                    this.#pageUI.updateKeyStatus(midiNum, microDist, result);
+                }
+            });
+            key.addEventListener("mouseup", (e) => {
+                //this.#synth.ActiveInstrument.noteOff(midiNum, microDist);
+                this.#synth.ActiveInstrument.allNotesOff();
+                this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
+            });
+            key.addEventListener("mouseleave", (e) => {
+                //this.#synth.ActiveInstrument.noteOff(midiNum, microDist);
+                this.#synth.ActiveInstrument.allNotesOff();
+                this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
+            });
         }
     }
 
@@ -160,19 +222,34 @@ export class PageController {
 
                 let midiNum = key.getAttribute('midinum');
                 let microDist = key.getAttribute('microDist');
+                let excluded = key.getAttribute('excluded');
 
                 key.addEventListener("mousedown", (e) => {
                     if (e.buttons & 1) {
+                        let result = 'error';
+
                         this.#synth.ActiveInstrument.allNotesOff();
-                        this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
-                        this.#pageUI.updateKeyStatus(midiNum, microDist, 'on');
+                        if (excluded != 'yes') {
+                            let note = this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
+                            if (note != null)
+                                result = 'on';
+                        }
+
+                        this.#pageUI.updateKeyStatus(midiNum, microDist, result);
                     }
                 });
                 key.addEventListener("mouseenter", (e) => {
                     if (e.buttons & 1) {
+                        let result = 'error';
+
                         this.#synth.ActiveInstrument.allNotesOff();
-                        this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
-                        this.#pageUI.updateKeyStatus(midiNum, microDist, 'on');
+                        if (excluded != 'yes') {
+                            let note = this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
+                            if (note != null)
+                                result = 'on';
+                        }
+
+                        this.#pageUI.updateKeyStatus(midiNum, microDist, result);
                     }
                 });
                 key.addEventListener("mouseup", (e) => {
@@ -227,7 +304,7 @@ export class PageController {
 
         } else if (parser.IsControl) {
             if (parser.ControlKey == MidiCC.VOLUME || parser.ControlKey == MidiCC.ALESIS_VOLUME) {
-				this.#pageUI.MasterVolume = parser.value;
+				this.#pageUI.MasterVolume = parser.Value;
                 this.#synth.MasterVolume = parser.Value / 127.0;
             }
         }
@@ -246,7 +323,7 @@ export class PageController {
 		let pageUI = this.#pageUI;
 
 		/*
-        document.querySelector('#ShrinkPianoId').addEventListener('change',
+        document.querySelector('#StretchPianoId').addEventListener('change',
 			(evt) => {
             	let bounds = noteTable.NoteBounds;
             	if (evt.target.checked && bounds.firstMidiNum > 0)
@@ -255,6 +332,15 @@ export class PageController {
         );
 		*/
 
+        pageUI.MainForm.elements['JumpToFirst'].addEventListener('change',
+			(evt) => {
+            	let bounds = noteTable.NoteBounds;
+            	if (evt.target.checked && bounds.firstMidiNum > 0)
+                	pageUI.scrollTo(bounds.firstMidiNum);
+			}
+        );
+
+        /*
         document.querySelector('#JumpToFirstId').addEventListener('change',
 			(evt) => {
             	let bounds = noteTable.NoteBounds;
@@ -262,6 +348,7 @@ export class PageController {
                 	pageUI.scrollTo(bounds.firstMidiNum);
 			}
         );
+        */
     }
 }
 
@@ -316,159 +403,156 @@ export class PageController {
 
 export class PageForm extends EventTarget {
 	#opts = null;
-	#music = null;
+    #music = null;
+	#controller = null;
+    #pageUI = null;
 	#form = null;
 
-    #formElements = [
-        'VideoFormatId',
-		'AtariTone0Id', 'AtariTone1Id', 'AtariTone2Id',
-		'TuningMethodId',
-        'A4FrequencyId', 'A4FrequencyRangeId',
-        'CentTransposeId', 'CentTransposeId',
-		'NumMicroTonesId', 'NumMicroTonesRangeId',
-        'TuningSensitivityId', 'TuningSensitivityRangeId', 'TuningGradientId',
-        'PrintBlackKeysId', 'PrintGeometryId', 'JumpToFirstId', 'ShrinkPianoId',
-        'InstrumentId', 'VolumeId', 'PolyphonyId'
-    ];
-
-	constructor(opts, music, form) {
+	constructor(opts, controller) {
 		super();
 		this.#opts = opts;
-		this.#music = music;
-		this.#form = form;
+		this.#controller = controller;
+        this.#music = controller.Music;
+        this.#pageUI = controller.PageUI;
+		this.#form = controller.PageUI.MainForm;
 		this.#setFormHandlers();
 	}
 
 	#setFormHandlers() {
-		this.#form.addEventListener('submit',
-			(evt) => {
-				evt.preventDefault();
-				return false;
-			}
-		);
+		this.#form.addEventListener('submit', (evt) => {
+			evt.preventDefault();
+			return false;
+		});
 
-        document.querySelector('#ResetId').addEventListener('click', (evt) => {
+        this.#form.elements['Reset'].addEventListener('click', (evt) => {
             this.#opts.clearStorage();
             this.#opts.loadDefaults();
-            this.#opts.writeToForm();
+            this.#opts.writeToForm(this.#form);
             this.#opts.saveToStorage();
 
             this.#music.A4Frequency = this.#opts.A4Freq;
             this.#music.NumTranspose = this.#opts.Transpose;
             this.#music.NumMicroTones = this.#opts.NumMicroTones;
             this.#music.TuningSensitivity = this.#opts.TuningSensitivity;
-
-/*
-            this.#updateAll();
-            this.#page.update(this.#noteJoiner);
-            this.#setupEventHandlers();
-            this.#resetSynth("piano");
-*/
         });
 
     	let validators = {
-        	'VideoFormatId': (evt) => { this.#update({ atari: true }) },
-        	'AtariTone0Id': (evt) => { this.#update({ atari: true }) },
-        	'AtariTone1Id': (evt) => { this.#update({ atari: true }) },
-        	'AtariTone2Id': (evt) => { this.#update({ atari: true }) },
-        	'TuningMethodId': (evt) => { this.#update({ piano: true }) },
-        	'TuningGradientId': (evt) => { this.#update({ full: true }) },
-        	'PrintBlackKeysId': (evt) => { this.#update({ full: true }) },
-        	//'PrintFrequencyId': (evt) => { this.#update({ full: true }) },
-        	'ShrinkPianoId': (evt) => { this.#update({ full: true }) },
-        	//'InstrumentId': (evt) => { this.#resetSynth(e.target.value) },
-        	//'PolyphonyId': (evt) => { this.#resetSynth(document.querySelector('#InstrumentId').value) }
-        	'A4FrequencyId': (evt) => {
+        	'VideoFormat': (evt) => {
+                console.notice(console.stream.ui, "changing video format to " + this.#form.elements['VideoFormat'].value);
+                this.#update({ atari: true })
+				this.#pageUI.loadCartridge(this.#opts.CartridgeURL);
+            },
+        	'AtariTone0': (evt) => { this.#update({ full: true }) },
+        	'AtariTone1': (evt) => { this.#update({ atari: true }) },
+        	'AtariTone2': (evt) => { this.#update({ atari: true }) },
+        	'TuningMethod': (evt) => { this.#update({ piano: true }) },
+        	'TuningGradient': (evt) => { this.#update({ full: true }) },
+        	'PrintBlackKeys': (evt) => { this.#update({ full: true }) },
+        	//'PrintFrequency': (evt) => { this.#update({ full: true }) },
+        	'StretchPiano': (evt) => { this.#update({ full: true }) },
+        	'JumpToFirst': (evt) => { this.#update({ }) },
+        	'Instrument': (evt) => {
+                this.#controller.enableInstrument(evt.target.value);
+				this.#update({ none: true });
+            },
+            'Scale': (evt) => {
+				this.#update({ full: true });
+            },
+        	//'Polyphony': (evt) => { this.#resetSynth(this.#form.elements['Instrument'].value) }
+        	'A4Frequency': (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 1);
-            	document.querySelector('#A4FrequencyRangeId').value = value;
+            	this.#form.elements['A4FrequencyRange'].value = value;
 				this.#music.A4Frequency = value;
 				this.#update({ full: true });
         	},
-        	'A4FrequencyRangeId': (evt) => {
+        	'A4FrequencyRange': (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 1);
-            	document.querySelector('#A4FrequencyId').value = value;
+            	this.#form.elements['A4Frequency'].value = value;
 				this.#music.A4Frequency = value;
 				this.#update({ full: true });
         	},
-        	'CentTransposeId': (evt) => {
+        	'CentTranspose': (evt) => {
             	let value = parseInt(evt.target.value);
-            	document.querySelector('#CentTransposeRangeId').value = value;
+            	this.#form.elements['CentTransposeRange'].value = value;
 				this.#music.CentTranspose = value;
 				this.#update({ full: true });
         	},
-        	'CentTransposeRangeId': (evt) => {
+        	'CentTransposeRange': (evt) => {
             	let value = parseInt(evt.target.value);
-            	document.querySelector('#CentTransposeId').value = value;
+            	this.#form.elements['CentTranspose'].value = value;
 				this.#music.CentTranspose = value;
 				this.#update({ full: true });
         	},
-        	'NumMicroTonesId': (evt) => {
+        	'NumMicroTones': (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 1);
-            	document.querySelector('#NumMicroTonesRangeId').value = value;
+            	this.#form.elements['NumMicroTonesRange'].value = value;
 				this.#music.NumMicroTones = value;
 				this.#update({ full: true });
         	},
-        	'NumMicroTonesRangeId': (evt) => {
+        	'NumMicroTonesRange': (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 1);
-            	document.querySelector('#NumMicroTonesId').value = value;
+            	this.#form.elements['NumMicroTones'].value = value;
 				this.#music.NumMicroTones = value;
 				this.#update({ full: true });
         	},
-        	'TuningSensitivityId': (evt) => {
+        	'TuningSensitivity': (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 0);
-            	document.querySelector('#TuningSensitivityRangeId').value = value;
+            	this.#form.elements['TuningSensitivityRange'].value = value;
 				this.#music.TuningSensitivity = value;
 				this.#update({ atari: true });
         	},
-        	'TuningSensitivityRangeId': (evt) => {
+        	'TuningSensitivityRange': (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 0)
-            	document.querySelector('#TuningSensitivityId').value = value;
+            	this.#form.elements['TuningSensitivity'].value = value;
 				this.#music.TuningSensitivity = value;
 				this.#update({ atari: true });
         	},
-			/*
-        	'VolumeId': (e) => { this.#synth.MasterVolume = parseInt(document.querySelector('#VolumeId').value) / 127.0; },
-        	'InstrumentId': (e) => {
-            	switch(e.target.value) {
-                	case 'tia':
-                    	$('#PianoOptsId').hide();
-                    	break;
-                	case 'piano':
-                	default:
-                    	$('#PianoOptsId').show();
-                    	break;
-            	}
-        	},
-        	//'InstrumentId':             (evt) => { this.#resetSynth(e.target.value) },
-        	//'PolyphonyId':              (evt) => { this.#resetSynth(document.querySelector('#InstrumentId').value) }
-			*/
+        	'Volume': (evt) => {
+                if (this.#controller.Synth == null)
+                    return;
+
+                let volume = parseFloat(this.#form['Volume'].value);
+                volume = this.#pageUI.clampVolume(volume);
+                this.#form['Volume'].value = volume;
+            	this.#form.elements['VolumeRange'].value = volume;
+                this.#controller.Synth.MasterVolume = volume / this.#pageUI.MaxVolume;
+				this.#update({});
+            },
+        	'VolumeRange': (evt) => {
+                if (this.#controller.Synth == null)
+                    return;
+
+                let volume = parseFloat(this.#form['VolumeRange'].value);
+                volume = this.#pageUI.clampVolume(volume);
+                this.#form['Volume'].value = volume;
+            	this.#form.elements['Volume'].value = volume;
+                this.#controller.Synth.MasterVolume = volume / this.#pageUI.MaxVolume;
+				this.#update({});
+            },
     	};
 
-        for (let id in validators) {
-			let elem = document.querySelector('#' + id);
+        for (let elemName in validators) {
+			let elem = this.#form.elements[elemName];
 			if (elem != null) {
             	elem.addEventListener('change',
-                	(evt) => { validators[id](evt); }
+                	(evt) => { validators[elemName](evt) }
 				);
 			} else {
-				console.log("HTML element was not found: " + id);
+				console.log("form input element was not found: " + elemName);
 			}
         }
 	}
 
 	#update(update) {
-        this.#opts.readFromForm();
+        this.#opts.readFromForm(this.#form);
         this.#opts.saveToStorage();
 
 		if (update.full) { 
 			super.dispatchEvent(new Event("fullupdate"));
-		} else {
-			if (update.piano) {
-				super.dispatchEvent(new Event("pianoupdate"));
-			} else if (update.atari) {
-				super.dispatchEvent(new Event("atariupdate"));
-			}
+		} else if (update.piano) {
+			super.dispatchEvent(new Event("pianoupdate"));
+		} else if (update.atari) {
+			super.dispatchEvent(new Event("atariupdate"));
 		}
 	}
 }
-
