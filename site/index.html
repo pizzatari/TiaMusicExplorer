@@ -48,8 +48,8 @@
 	let args = {
 		audc: opts.AtariTones,
 		mode: opts.VideoFormat,
-		bounds: NoteListBuilder.getTIABounds(pageController.Music, args),
 	};
+	args['bounds'] = NoteListBuilder.getTIABounds(pageController.Music, args);
     let synth = new Synth(new AudioContext(), pageController.Music, args);
 
     if (synth.AudioContext.state == 'running') {
