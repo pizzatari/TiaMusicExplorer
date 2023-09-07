@@ -1,8 +1,8 @@
 import { PageUI } from "./PageUI.js"
 import { Music } from "../Music/Music.js"
 import { Synth } from "../Music/Synth.js"
-import { MidiParser, MidiCC } from "../MUsic/Midi.js"
-import { NoteListBuilder } from "../MUsic/NoteListBuilder.js"
+import { MidiParser, MidiCC } from "../Music/Midi.js"
+import { NoteListBuilder } from "../Music/NoteListBuilder.js"
 
 export class PageController {
     #opts = null;
