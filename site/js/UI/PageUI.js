@@ -1,5 +1,5 @@
 import { Music } from "../Music/Music.js";
-import { NoteGroup } from "../Music/NoteListBuilder.js";
+import { NoteTable, NoteGroup } from "../Music/NoteListBuilder.js";
 
 const KeyOnColor = { text: '#000', key: '#fff', image: '' };
 const KeyColors = {
@@ -28,18 +28,16 @@ export class PageUI {
 
     // 0 <= volume <= 127
     set MasterVolume(val) {
-		//let volumeElem = document.querySelector('#VolumeId');
 		let volumeElem = this.MainForm.elements['Volume'];
         volumeElem.value = val;
-        console.notice(console.stream.ui, "setting volume: " + val);
+		volumeElem = this.MainForm.elements['VolumeRange'];
+        volumeElem.value = val;
     }
 
     get MasterVolume() {
-		//let val = parseFloat(document.querySelector('#VolumeId').value);
 		let val = parseInt(this.MainForm.elements['Volume'].value);
         val = Math.max(this.MinVolume, val);
         val = Math.min(this.MaxVolume, val);
-        console.notice(console.stream.ui, "getting volume: " + val);
         return val;
     }
 
@@ -214,6 +212,9 @@ export class PageUI {
 
         let html = this.#VTableTop();
         for(const row of table) {
+            if (this.#opts.StretchFit && (row.MicroId < bounds.firstMicroId || row.MicroId >  bounds.lastMicroId)) 
+                continue;
+
 			html += this.#VTableRow(row);
         }
         html += this.#VTableBottom();

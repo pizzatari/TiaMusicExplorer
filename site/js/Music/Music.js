@@ -60,19 +60,11 @@ export class Music extends EventTarget {
     #frequencyPrecision = 2;
     #centPrecision = 2;
 
-    // TODO
-    #referenceFrequency = 1.0;  // don't remember what this is for
-    #tones = [1];               // this belongs in TIA class
-
     get A4KeyNum() { return this.#a4KeyNum }
     get A4Frequency() { return this.#a4Frequency }
     get CentTranspose () { return this.#centTranspose }
     get NumMicroTones() { return this.#numMicroTones }
     get TuningSensitivity() { return this.#tuningSensitivity }
-    get Tones() { return this.#tones }
-    get FrequencyPrecision() { return this.#frequencyPrecision}
-    get CentPrecision() { return this.#centPrecision }
-    get ReferenceFrequency() { return this.#referenceFrequency }
 
     set A4KeyNum(key) {
         this.#a4KeyNum = key;
@@ -94,20 +86,16 @@ export class Music extends EventTarget {
         this.#tuningSensitivity = cents;
         //super.dispatchEvent(new Event("musicupdate"));
     }
-    set Tones(tones) {
-        this.#tones = tones;
-        //super.dispatchEvent(new Event("musicupdate"));
-    }
+
+    get FrequencyPrecision() { return this.#frequencyPrecision}
+    get CentPrecision() { return this.#centPrecision }
+
     set FrequencyPrecision(intNum) {
         this.#frequencyPrecision = (intNum > 0 ? parseInt(intNum) : 0);
         //super.dispatchEvent(new Event("musicupdate"));
     }
     set CentPrecision(intNum) {
         this.#centPrecision = (intNum > 0 ? parseInt(intNum) : 0);
-        //super.dispatchEvent(new Event("musicupdate"));
-    }
-    set ReferenceFrequency(freq) {
-        this.#referenceFrequency = freq;
         //super.dispatchEvent(new Event("musicupdate"));
     }
 
@@ -135,11 +123,12 @@ export class Music extends EventTarget {
 
     equals(music) {
         // account for differences in precision, so use the least precision.
-        let precision = Math.Max(this.FrequencyPrecision, music.FrequencyPrecision);
+        //let precision = Math.Max(this.FrequencyPrecision, music.FrequencyPrecision);
 
         if (this.A4KeyNum != music.A4KeyNum)
             return false;
-        if (Music.Round(this.A4Frequency, precision) != Music.Round(music.A4Frequency, precision))
+        //if (Music.Round(this.A4Frequency, precision) != Music.Round(music.A4Frequency, precision))
+        if (this.A4Frequency != music.A4Frequency)
             return false;
         if (this.CentTranspose != music.CentTranspose)
             return false;
@@ -147,11 +136,17 @@ export class Music extends EventTarget {
             return false;
         if (this.TuningSensitivity != music.TuningSensitivity)
             return false;
-        if (this.Tones != music.Tones)
-            return false;
-        if (Music.Round(this.ReferenceFrequency, precision) != Music.Round(music.ReferenceFrequency, precision))
-            return false;
         return true;
+    }
+
+    clone() {
+        let music = new Music();
+        music.A4KeyNum = this.A4KeyNum;
+        music.A4Frequency = this.A4Frequency;
+        music.CentTranspose = this.CentTranspose;
+        music.NumMicroTones = this.NumMicroTones;
+        music.TuningSensitivity = this.TuningSensitivity;
+        return music;
     }
 
     MicroFrequency(keyNum, microDist = 0) {
@@ -306,7 +301,7 @@ export class Music extends EventTarget {
 
     // serializes this object's values to a delimited string. optionally appends additional values to the end.
     SerializeValues(params = null) {
-        let ary = [this.A4KeyNum, this.A4Frequency, this.CentTranspose, this.NumMicroTones, this.TuningSensitivity, this.Tones, this.ReferenceFrequency ];
+        let ary = [this.A4KeyNum, this.A4Frequency, this.CentTranspose, this.NumMicroTones, this.TuningSensitivity ];
 
         if (params != null) {
             for (let [name, value] of params)

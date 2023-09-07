@@ -194,18 +194,21 @@ export class MusicNote {
     }
 
     clone() {
-        return new MusicNote(this.#music, this.#getFields(), false);
+        return new MusicNote(this.#music.clone(), this.#getFields(), false);
     }
 }
 
 // produces the scale 88 key keyboards use: keys A0 to C8
 export class MusicScale {
     #music = null;
+    #bounds = null;
 
     #firstOctave = 0;
     #lastOctave = 8;
     #firstKeyNum = 1;
     #lastKeyNum = 88;
+    //#firstKeyNum = -50;
+    //#lastKeyNum = 115;
 
     get Music() { return this.#music }
 
@@ -221,11 +224,17 @@ export class MusicScale {
     get LastKeyNum() { return this.#lastKeyNum }
     set LastKeyNum(num) { this.#lastKeyNum = num }
 
-    constructor(music) {
+    constructor(music, bounds=null) {
         if (music == null)
             this.#music = new Music();
         else
             this.#music = music;
+
+        this.#bounds = bounds;
+        if (this.#bounds != null) {
+            this.FirstKeyNum = this.#bounds.firstKeyNum;
+            this.LastKeyNum = this.#bounds.lastKeyNum;
+        }
     }
 
     getNoteList() {
@@ -233,6 +242,9 @@ export class MusicScale {
         let mid = this.#music.NumMicroTones > 0 ? (this.#music.NumMicroTones-1)/2 : 0;
         let startDistance = 0-Math.floor(mid);	// ...-2, -1, 0
         let endDistance = Math.ceil(mid);		// 0, +1, +2...
+        
+        console.log(`MusicScale: getNoteList: ${this.FirstKeyNum} to ${this.LastKeyNum}`);
+        console.log(this.#bounds);
 
         for(let keyNum = this.FirstKeyNum; keyNum <= this.LastKeyNum; keyNum++) {
             for(let dist = startDistance; dist <= endDistance; ++dist) {

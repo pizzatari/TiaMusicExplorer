@@ -1,6 +1,6 @@
 import { Music } from "./Music.js";
 import { MusicScale, MusicNote } from "./Scales/MusicScale.js";
-import { TIAScale, TIANote } from "./Scales/TIAScale.js";
+import { TIAScale, TIANote, ModeMap, Divisors } from "./Scales/TIAScale.js";
 
 // maps a key note to a group of similar notes
 export class NoteGroup {
@@ -42,38 +42,81 @@ export class NoteGroup {
     }
 }
 
+export class NoteList extends Array {
+    #noteBounds = {
+        firstMicroId: Number.MAX_VALUE, lastMicroId: -Number.MAX_VALUE,
+        firstMidiNum: Number.MAX_VALUE, lastMidiNum: -Number.MAX_VALUE,
+        firstKeyNum:  Number.MAX_VALUE, lastKeyNum:  -Number.MAX_VALUE,
+    };
+
+    get Bounds() { return this.#noteBounds }
+
+    pushNote(note) {
+        this.push(note);
+
+        if (note.MicroId < this.#noteBounds.firstMicroId)
+            this.#noteBounds.firstMicroId = note.MicroId;
+
+        if (note.MicroId > this.#noteBounds.lastMicroId)
+            this.#noteBounds.lastMicroId = note.MicroId;
+
+        if (note.MidiNum < this.#noteBounds.firstMidiNum)
+            this.#noteBounds.firstMidiNum = note.MidiNum;
+
+        if (note.MidiNum > this.#noteBounds.lastMidiNum)
+            this.#noteBounds.lastMidiNum = note.MidiNum;
+
+        if (note.KeyNum < this.#noteBounds.firstKeyNum)
+            this.#noteBounds.firstKeyNum = note.KeyNum;
+
+        if (note.KeyNum > this.#noteBounds.lastKeyNum)
+            this.#noteBounds.lastKeyNum = note.KeyNum;
+    }
+
+    pushNotes(ary) {
+        for (let i=0; i < ary.length; i++)
+            this.pushNote(ary[i]);
+    }
+
+    clone() {
+        let list = new NoteList();
+
+        for (let i=0; i < this.length; i++)
+            list.pushNote(this[i].clone());
+
+        return list;
+    }
+}
+
 // map = MicroId -> NoteGroup
 export class NoteTable extends Map {
-    #pivotNoteList = null;
-    #noteLists = [];
+    #pivotNoteList = new NoteList();
+    #noteList = new NoteList();
+
     #matchedNotes = [];
     #unmatchedNotes = [];
-    #pivotBounds = {
-        firstMicroId:-1, lastMicroId:0,
-        firstMidiNum:-1, lastMidiNum:0
-    };
-    #noteBounds = {
-        firstMicroId:-1, lastMicroId:0,
-        firstMidiNum:-1, lastMidiNum:0
-    };
 
-    constructor(pivotNoteList, noteList) {
+    constructor(pivotNoteAry, noteAry) {
         super();
-        this.#pivotNoteList = pivotNoteList;
 
-        for (let note of pivotNoteList)
+        this.#pivotNoteList.pushNotes(pivotNoteAry);
+
+        for (let note of pivotNoteAry)
             this.set(note.MicroId, new NoteGroup(note));
 
-        this.#noteLists.push(noteList);
-        this.joinList(noteList);
+        this.joinList(noteAry);
     }
 
     get PivotNoteList() { return this.#pivotNoteList }
-    get PivotBounds() { return this.#pivotBounds }
-    get NoteBounds() { return this.#noteBounds }
+    get NoteList() { return this.#noteList }
 
-    joinList(noteList) {
-        for (let n of noteList) {
+    get PivotBounds() { return this.#pivotNoteList.Bounds }
+    get NoteBounds() { return this.#noteList.Bounds }
+
+    joinList(noteAry) {
+        this.#noteList.pushNotes(noteAry);
+
+        for (let n of noteAry) {
             let note = n.clone(n);
             let group = this.get(note.MicroId);
             if (group !== undefined) {
@@ -83,20 +126,7 @@ export class NoteTable extends Map {
             } else {
                 this.#unmatchedNotes.push(note);
             }
-
-            if (this.#noteBounds.firstMicroId == -1 || note.MicroId < this.#noteBounds.firstMicroId)
-                this.#noteBounds.firstMicroId = note.MicroId;
-
-            if (note.MicroId > this.#noteBounds.lastMicroId)
-                this.#noteBounds.lastMicroId = note.MicroId;
-
-            if (this.#noteBounds.firstMidiNum == -1 || note.MidiNum < this.#noteBounds.firstMidiNum)
-                this.#noteBounds.firstMidiNum = note.MidiNum;
-
-            if (note.MidiNum > this.#noteBounds.lastMidiNum)
-                this.#noteBounds.lastMidiNum = note.MidiNum;
         }
-        return noteList;
     }
 
     getFlattenedTable() {
@@ -120,8 +150,6 @@ export class NoteTable extends Map {
 				Key: keyNote.Key,
 				KeyUp: keyNote.KeyUp,
 				KeyDown: keyNote.KeyDown,
-                //FlatKey: keyNote.FlatKey,
-                //SharpKey: keyNote.SharpKey,
 
                 IsWhite: keyNote.IsWhite,
                 IsBlack: keyNote.IsBlack,
@@ -150,18 +178,52 @@ export class NoteTable extends Map {
 
         return ary;
     }
-
 }
 
 export class NoteListBuilder {
-    static getPianoNotes(music) {
-        let scale = new MusicScale(music);
-        return scale.getNoteList();
+    static tiaCache = new Map();
+
+    static getPianoNotes(music, bounds=null) {
+        let noteList = new NoteList();
+        let scale = new MusicScale(music, bounds);
+
+        noteList.pushNotes(scale.getNoteList());
+
+        return noteList;
+    }
+
+    static getTIABounds(music, args) {
+		let videoMode = ModeMap[args.mode];
+        let minFreq = Number.MAX_VALUE;
+        let maxFreq = -Number.MAX_VALUE;
+
+        for (let i=0; i < args.audc.length; i++) {
+            let audc = args.audc[i];
+            let min = videoMode.AudioFrequency / Divisors[audc] / 32;
+            let max = videoMode.AudioFrequency / Divisors[audc] / 1;
+
+            if (min , minFreq)
+                minFreq = min;
+            if (max > maxFreq)
+                maxFreq = max;
+        }
+
+        return {
+            firstMicroId: music.FrequencyToMicroId(minFreq), lastMicroId: music.FrequencyToMicroId(maxFreq),
+            firstMidiNum: music.FrequencyToMidiNum(minFreq), lastMidiNum: music.FrequencyToMidiNum(maxFreq),
+            firstKeyNum:  music.FrequencyToKeyNum(minFreq),  lastKeyNum:  music.FrequencyToKeyNum(maxFreq),
+        };
     }
 
     static getTIANotes(music, args) {
-        let scale = new TIAScale(music, args);
-        return scale.getNoteList();
+        let noteList = new NoteList();
+
+        for (let i=0; i < args.audc.length; i++) {
+            let scale = new TIAScale(music, args.mode, args.audc[i]);
+            noteList.pushNotes(scale.getNoteList());
+        }
+
+        return noteList;
     }
 
     static getNoteTable(pivotNoteList, noteList) {

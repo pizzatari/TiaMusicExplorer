@@ -36,17 +36,12 @@ export class TIAInstrument extends SynthInstrument {
 			if (slot !== null) {
         		// logarithmic curve
                 let effectiveVolume = super.toEffectiveVolume(velocity);
-            	//console.notice(console.stream.tia, "[" + id + "] noteOn " + this.numSlotsFree());
 
             	Javatari.room.console.tia.write(TIA_AUDC[slot], note.AUDC);
             	Javatari.room.console.tia.write(TIA_AUDF[slot], note.AUDF);
             	Javatari.room.console.tia.write(TIA_AUDV[slot], Math.round(effectiveVolume * 15));
                 return note;
-			} else {
-            	console.notice(console.stream.tia, "[" + id + "] polyphony exceeded " + this.numSlotsFree());
 			}
-        } else {
-            //console.notice(console.stream.tia, "undefined note " + midiNote);
         }
         return null;
     }
@@ -59,15 +54,10 @@ export class TIAInstrument extends SynthInstrument {
 			let slot = this.getActiveSlot(id);
 
 			if (slot !== null) {
-            	console.notice(console.stream.tia, "[" + id + "] noteOff " + this.numSlotsFree());
             	Javatari.room.console.tia.write(TIA_AUDV[slot], 0);
                 this.freeSlot(id);
                 return note;
-			} else {
-            	console.notice(console.stream.tia, "noteOff(): note not playing " + midiNote);
 			}
-        } else {
-            //console.notice(console.stream.tia, "undefined note " + midiNote);
         }
         return null;
 	}

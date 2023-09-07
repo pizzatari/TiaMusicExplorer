@@ -3,6 +3,8 @@ const CART_URLS = {
     pal: './atari2600/PAL.bin',
 };
 
+const MAX_ATARI_TONES = 3;
+
 export class Options {
     #fields = {};
 
@@ -23,8 +25,8 @@ export class Options {
         this.#fields.PrintBlackKeys = false;
         this.#fields.PrintGeometry = true;
         this.#fields.PrintFrequency = true;
-        this.#fields.StretchPiano = false;
-        this.#fields.ExpandPiano = false;
+        this.#fields.Fixed88Keys = true;
+        this.#fields.StretchFit = false;
         this.#fields.JumpToFirst = false;
         this.#fields.InnerJoin = false;
 
@@ -41,9 +43,8 @@ export class Options {
         this.#fields.FirstPianoOctave = 0;
     }
 
-    // special form values
-    get AtariTones() { return [...this.#fields.AtariTones] }
-    set AtariTones(ary) { this.#fields.AtariTones = (Array.isArray(ary) ? ary : this.#fields.AtariTones) } 
+    get AtariTones() { return this.#fields.AtariTones }
+    set AtariTones(ary) { this.#fields.AtariTones = ary } 
 
     getAtariTone(idx) { return this.#fields.AtariTones[idx] }
     setAtariTone(idx, val) { this.#fields.AtariTones[idx] = parseInt(val) }
@@ -70,8 +71,10 @@ export class Options {
     set PrintGeometry(val) { this.#fields.PrintGeometry = val }
     get PrintFrequency() { return this.#fields.PrintFrequency }
     set PrintFrequency(val) { this.#fields.PrintFrequency = val }
-    get StretchPiano() { return this.#fields.StretchPiano }
-    set StretchPiano(val) { this.#fields.StretchPiano = val }
+    get Fixed88Keys() { return this.#fields.Fixed88Keys }
+    set Fixed88Keys(val) { this.#fields.Fixed88Keys = val }
+    get StretchFit() { return this.#fields.StretchFit }
+    set StretchFit(val) { this.#fields.StretchFit = val }
     get JumpToFirst() { return this.#fields.JumpToFirst }
     set JumpToFirst(val) { this.#fields.JumpToFirst = val }
 
@@ -100,16 +103,14 @@ export class Options {
     set FirstPianoOctave(val) { this.#fields.FirstPianoOctave = val }
 
     readFromForm(formElem) {
-        this.#fields.AtariTones.length = 0;
-        this.#fields.AtariTones.push(parseInt(document.querySelector('#AtariTone0Id').value));
+        this.#fields.AtariTones = [];
 
-        let e = document.querySelector('#AtariTone1Id').value;
-        if (e != null)
-            this.#fields.AtariTones.push(parseInt(e));
-
-        e = document.querySelector('#AtariTone2Id').value;
-        if (e != null)
-            this.#fields.AtariTones.push(parseInt(e));
+        for (let i=0; i < MAX_ATARI_TONES; i++) {
+            let name = 'AtariTone' + i;
+            let tone = formElem.elements[name].value;
+            if (tone !== '' && tone !== null)
+                this.#fields.AtariTones.push(parseInt(tone));
+        }
 
         this.#fields.VideoFormat = document.querySelector('#VideoFormatId').value;
         this.#fields.TuningMethod = document.querySelector('#TuningMethodId').value;
@@ -122,8 +123,8 @@ export class Options {
         this.#fields.PrintBlackKeys = document.querySelector('#PrintBlackKeysId').checked;
         //this.#fields.PrintGeometry = document.querySelector('#PrintGeometryId').checked;
         //this.#fields.PrintFrequency = document.querySelector('#PrintFrequencyId').checked;
-        this.#fields.StretchPiano = document.querySelector('#StretchPianoId').checked;
-        //this.#fields.ExpandPiano = document.querySelector('#ExpandPianoId').checked;
+        this.#fields.Fixed88Keys = document.querySelector('#Fixed88KeysId').checked;
+        this.#fields.StretchFit = document.querySelector('#StretchFitId').checked;
         this.#fields.JumpToFirst = document.querySelector('#JumpToFirstId').checked;
         //this.#fields.InnerJoin = document.querySelector('#InnerJoinId').checked;
 
@@ -136,9 +137,19 @@ export class Options {
 
     writeToForm(formElem) {
         document.querySelector('#VideoFormatId').value = this.#fields.VideoFormat;
-        document.querySelector('#AtariTone0Id').value = this.#fields.AtariTones[0];
-        document.querySelector('#AtariTone1Id').value = this.#fields.AtariTones[1];
-        document.querySelector('#AtariTone2Id').value = this.#fields.AtariTones[2];
+
+        for (let i=0; i < MAX_ATARI_TONES; i++) {
+            let name = 'AtariTone' + i;
+            if (typeof this.#fields.AtariTones[i] != 'undefined')
+                formElem.elements[name].value = this.#fields.AtariTones[i];
+        }
+
+        /*
+        document.querySelector('#AtariTone0Id').value = typeof this.#fields.AtariTones[0] != 'undefined' ? this.#fields.AtariTones[0] : '';
+        document.querySelector('#AtariTone1Id').value = typeof this.#fields.AtariTones[1] != 'undefined' ? this.#fields.AtariTones[1] : '';
+        document.querySelector('#AtariTone2Id').value = typeof this.#fields.AtariTones[2] != 'undefined' ? this.#fields.AtariTones[2] : '';
+        */
+
         document.querySelector('#TuningMethodId').value = this.#fields.TuningMethod;
         document.querySelector('#A4FrequencyId').value = this.#fields.A4Frequency;
         document.querySelector('#A4FrequencyRangeId').value = parseInt(this.#fields.A4Frequency);
@@ -153,7 +164,8 @@ export class Options {
         document.querySelector('#PrintBlackKeysId').checked = this.#fields.PrintBlackKeys;
         //document.querySelector('#PrintGeometryId').checked = this.#fields.PrintGeometry;
         //document.querySelector('#PrintFrequencyId').checked = this.#fields.PrintFrequency;
-        document.querySelector('#StretchPianoId').checked = this.#fields.StretchPiano;
+        document.querySelector('#Fixed88KeysId').checked = this.#fields.Fixed88Keys;
+        document.querySelector('#StretchFitId').checked = this.#fields.StretchFit;
         document.querySelector('#JumpToFirstId').checked = this.#fields.JumpToFirst;
         //document.querySelector('#InnerJoinId').checked = this.#fields.InnerJoin;
 
@@ -182,7 +194,8 @@ export class Options {
         if (opts == null) return;
 
         for (let n in opts) {
-            this.#fields[n] = opts[n];
+            if (opts[n] !== null)
+                this.#fields[n] = opts[n];
         }
     }
 

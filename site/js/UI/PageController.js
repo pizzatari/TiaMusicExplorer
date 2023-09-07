@@ -11,7 +11,7 @@ export class PageController {
 	#music = null;
 
     #synth = null;
-    #midi = null;
+    #midiAccess = null;
     #midiParser = null;
 
 	#noteTable = null;
@@ -57,19 +57,18 @@ export class PageController {
     }
 
     addMIDIAccess(m) {
-        this.#midi = m;
-
-        this.#refreshMidiPorts();
-        this.#setMidiHandlers();
+        this.#midiParser = new MidiParser();
+        this.#midiAccess = m;
 
         // handle MIDI keyboard insertion and removal
-        this.#midi.addEventListener('statechange',
-            (evt) => {
-                this.#refreshMidiPorts();
-            }
-        );
+        this.#midiAccess.addEventListener('statechange', (evt) => {
+            console.notice(console.stream.midi, "midi device state change event");
+            this.#updateMidiPorts();
+            this.#setMidiHandlers();
+        });
 
-        this.#midiParser = new MidiParser();
+        this.#updateMidiPorts();
+        this.#setMidiHandlers();
     }
 
     enableInstrument(instrument) {
@@ -110,17 +109,31 @@ export class PageController {
         console.log(this.#opts);
         console.log(this.#music);
 
-    	this.#pianoNotes = NoteListBuilder.getPianoNotes(this.#music);
     	this.#tiaNotes = NoteListBuilder.getTIANotes(this.#music, {
-            audc: this.#opts.getAtariTone(0),
+            audc: this.#opts.AtariTones,
             mode: this.#opts.VideoFormat
         });
+
+        let bounds = null; 
+        if(this.#opts.StretchFit) {
+            bounds = {
+                firstMicroId: this.#tiaNotes[0].MicroId,
+                lastMicroId: this.#tiaNotes[this.#tiaNotes.length-1].MicroId,
+                firstMidiNum: this.#tiaNotes[0].MidiNum,
+                lastMidiNum: this.#tiaNotes[this.#tiaNotes.length-1].MidiNum,
+                firstKeyNum: this.#tiaNotes[0].KeyNum,
+                lastKeyNum: this.#tiaNotes[this.#tiaNotes.length-1].KeyNum,
+            };
+            console.log("TIA bounds: ");
+            console.log(bounds);
+        }
+    	this.#pianoNotes = NoteListBuilder.getPianoNotes(this.#music, bounds);
 
     	this.#noteTable = NoteListBuilder.getNoteTable(this.#pianoNotes, this.#tiaNotes);
     	this.#pageUI.updatePianos(this.#noteTable);
 
         this.#setHPianoHandlers();
-        this.#setVPianoHandlers();
+        this.#setVPianoHandlers(this.#opts.StretchFit);
 	}
 
     #updateSynth() {
@@ -133,12 +146,15 @@ export class PageController {
         }
 	}
 
-    #refreshMidiPorts() {
-        if (this.#midi.inputs.size == 0)
-            console.notice(console.stream.midi, "found no midi inputs");
-
+    #updateMidiPorts() {
         this.#pageUI.clearMidiLists();
-        for (let [id, input] of this.#midi.inputs) {
+
+        if (this.#midiAccess.inputs.size == 0) {
+            console.notice(console.stream.midi, "found no midi inputs");
+            return;
+        }
+
+        for (let [id, input] of this.#midiAccess.inputs) {
             this.#pageUI.addMidiInput(input.id, input.name, input.manufacturer, input.version);
             console.notice(console.stream.midi, "found input " + [input.id, input.name, input.manufacturer, input.version].join(" "));
         }
@@ -189,12 +205,10 @@ export class PageController {
                 }
             });
             key.addEventListener("mouseup", (e) => {
-                //this.#synth.ActiveInstrument.noteOff(midiNum, microDist);
                 this.#synth.ActiveInstrument.allNotesOff();
                 this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
             });
             key.addEventListener("mouseleave", (e) => {
-                //this.#synth.ActiveInstrument.noteOff(midiNum, microDist);
                 this.#synth.ActiveInstrument.allNotesOff();
                 this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
             });
@@ -211,12 +225,12 @@ export class PageController {
                 let key = table.rows[i].cells[0].childNodes[j];
 
                 if (typeof key == 'undefined') {
-                    console.log(`setVPianoHandlers: key undefined [${i},${j}]`);
+                    console.notice(console.stream.controller, `setVPianoHandlers: key undefined [${i},${j}]`);
 					continue;
 				}
 
                 if (key.tagName != 'SPAN') {
-                    console.log(`setVPianoHandlers: wrong HTML element type [${i},${j}] : ${key.tagName}`);
+                    console.notice(console.stream.controller, `setVPianoHandlers: wrong HTML element type [${i},${j}] : ${key.tagName}`);
 					continue;
 				}
 
@@ -253,12 +267,10 @@ export class PageController {
                     }
                 });
                 key.addEventListener("mouseup", (e) => {
-                    //this.#synth.ActiveInstrument.noteOff(midiNum, microDist);
                     this.#synth.ActiveInstrument.allNotesOff();
                     this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
                 });
                 key.addEventListener("mouseleave", (e) => {
-                    //this.#synth.ActiveInstrument.noteOff(midiNum, microDist);
                     this.#synth.ActiveInstrument.allNotesOff();
                     this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
                 });
@@ -266,18 +278,19 @@ export class PageController {
         }
     }
 
-    #setMidiHandlers(notifyHandler) {
-        // listening to all midi keyboard inputs
-        this.#midi.inputs.forEach(
-            (input) => {
-                input.addEventListener('midimessage',
-                    (evt) => {
-                        //this.#midiDebugOutput(evt);
-                        this.#handleMidiMessage(evt);
-                    }
-                );
-            }
-        );
+    // listening to all midi keyboard inputs
+    #setMidiHandlers() {
+        this.#midiAccess.inputs.forEach((input) => {
+            console.notice(console.stream.midi, "setting handler for " + input.id);
+
+            input.onmidimessage = (evt) => {
+                console.notice(console.stream.midi, "midimessage " + evt.type);
+
+                //this.#midiDebugOutput(evt);
+
+                this.#handleMidiMessage(evt);
+            };
+        });
     }
 
     #handleMidiMessage(evt) {
@@ -323,7 +336,7 @@ export class PageController {
 		let pageUI = this.#pageUI;
 
 		/*
-        document.querySelector('#StretchPianoId').addEventListener('change',
+        document.querySelector('#StretchFitId').addEventListener('change',
 			(evt) => {
             	let bounds = noteTable.NoteBounds;
             	if (evt.target.checked && bounds.firstMidiNum > 0)
@@ -354,7 +367,7 @@ export class PageController {
 
 
 /*
-        for (let [id, input] of this.#midi.inputs) {
+        for (let [id, input] of this.#midiAccess.inputs) {
             input.value.onmidimessage = (message) => {
                 this.#midiParser.parse(message);
 
@@ -449,7 +462,8 @@ export class PageForm extends EventTarget {
         	'TuningGradient': (evt) => { this.#update({ full: true }) },
         	'PrintBlackKeys': (evt) => { this.#update({ full: true }) },
         	//'PrintFrequency': (evt) => { this.#update({ full: true }) },
-        	'StretchPiano': (evt) => { this.#update({ full: true }) },
+        	'ShrinkPiano': (evt) => { this.#update({ full: true }) },
+        	'StretchFit': (evt) => { this.#update({ full: true }) },
         	'JumpToFirst': (evt) => { this.#update({ }) },
         	'Instrument': (evt) => {
                 this.#controller.enableInstrument(evt.target.value);

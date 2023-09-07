@@ -22,6 +22,7 @@ export class NTSCMode {
     #audioFrequency = NTSC_FREQ/AVG_COLOR_CLOCKS_PER_AUDIO;
     #fps            = 60/1.001; // fields per second
 
+    get Name() { return "ntsc" }
     get Frequency() { return this.#frequency }
     get FPS() { return this.#fps }
     get CpuFrequency() { return this.#cpuFrequency }
@@ -34,25 +35,165 @@ export class PALMode {
     #audioFrequency = PAL_FREQ/AVG_COLOR_CLOCKS_PER_AUDIO;
     #fps            = 50; // fields per second
 
+    get Name() { return "pal" }
     get Frequency() { return this.#frequency }
     get FPS() { return this.#fps }
     get CpuFrequency() { return this.#cpuFrequency }
     get AudioFrequency () { return this.#audioFrequency }
 }
 
-const ModeMap = {
+export const ModeMap = {
     'ntsc': new NTSCMode(),
     'pal': new PALMode()
 };
 
-const Divisors = [
+export const Divisors = [
 //     AUDC control value (0 and 11 are silent)
 //  0   1    2    3  4  5   6   7    8   9  10 11 12 13  14  15
     1, 15, 465, 465, 2, 2, 31, 31, 511, 31, 31, 1, 6, 6, 93, 93
 ];
 
 export class TIANote extends MusicNote {
-	#mode = null;
+	#videoMode = null;
+	#audc = 0;
+	#audf = 0;
+	#cents = 0.0;
+
+    #tones = [1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 14, 15];
+    #allTones = Array(16).fill(0).map((e,i) => { return 15 - i });
+    #allPitches = Array(32).fill(0).map((e,i) => { return 31 - i });
+
+    #nearestNote = null;
+
+    constructor(music, videoMode, audc, audf) {
+        audc = (audc >= 0 && audc < 16) ? audc : 0;
+        audf = (audf >= 0 && audf < 32) ? audf : 0;
+
+        let tiaFrequency = videoMode.AudioFrequency / Divisors[audc] / (audf+1);
+        super(music, { frequency: tiaFrequency }, true);
+		this.#videoMode = videoMode;
+        this.#audc = audc;
+        this.#audf = audf;
+        this.#nearestNote = new MusicNote(super.Music, { keyNum: super.KeyNum, microDist: super.MicroDist });
+        this.#cents = Music.CentsBetween(this.#nearestNote.Frequency, tiaFrequency);
+    }
+
+    get VideoMode() { return this.#videoMode }
+	get AUDC() { return this.#audc }
+	get AUDF() { return this.#audf }
+	get Cents() { return this.#cents }
+    get TIALabel() { return "" + this.AUDC + "/" + this.AUDF }
+
+	getCentsRounded(precision = null) {
+        if (precision === null)
+            return Music.Round(this.Cents, super.Music.FrequencyPrecision);
+
+        return Music.Round(this.Cents, parseInt(precision));
+	}
+
+    clone() {
+        return new TIANote(super.Music.clone(), this.VideoMode, this.AUDC, this.AUDF); 
+    }
+
+    computeFrequency(audc, audf) {
+        if (audc < 0 || audc >= 16 || audf < 0 || audf >= 32)
+            return 0.0;
+
+        return this.VideoMode.AudioFrequency / Divisors[audc] / (audf+1);
+    }
+
+    getNearestMusicNote() {
+        return this.#nearestNote;
+    }
+}
+
+export class TIAScale extends MusicScale {
+	#videoMode = ModeMap.ntsc;
+	//#audc = [0];
+	#audc = 0;
+
+    #bounds = {
+        firstMicroId: Number.MAX_VALUE, lastMicroId: -Number.MAX_VALUE,
+        firstMidiNum: Number.MAX_VALUE, lastMidiNum: -Number.MAX_VALUE,
+        firstKeyNum:  Number.MAX_VALUE, lastKeyNum:  -Number.MAX_VALUE,
+    };
+
+    constructor(music, modeStr, audc) {
+        super(music);
+		this.#audc = audc;
+		if (modeStr != '')
+			this.setModeByString(modeStr);
+
+		let minFreq = this.MinFrequency;
+		this.#bounds.firstMicroId = music.FrequencyToMicroId(minFreq);
+		this.#bounds.firstMidiNum = music.FrequencyToMidiNum(minFreq);
+		this.#bounds.firstKeyNum = music.FrequencyToKeyNum(minFreq);
+
+		let maxFreq = this.MaxFrequency;
+		this.#bounds.lastMicroId = music.FrequencyToMicroId(maxFreq);
+		this.#bounds.lastMidiNum = music.FrequencyToMidiNum(maxFreq);
+		this.#bounds.lastKeyNum = music.FrequencyToKeyNum(maxFreq);
+    }
+    /*
+    constructor(music, args) {
+        super(music);
+		this.#audc = args.audc;
+		if (args.mode != '')
+			this.setModeByString(args.mode);
+    }
+    */
+
+	get VideoMode() { return this.#videoMode };
+	get AUDC() { return this.#audc }
+
+    get MaxFrequency() { return this.VideoMode.AudioFrequency / Divisors[this.AUDC] / 1 }
+    get MinFrequency() { return this.VideoMode.AudioFrequency / Divisors[this.AUDC] / 32 }
+
+    get Bounds() { return this.#bounds }
+
+    setModeByString(str) {
+        if (typeof ModeMap[str] != 'undefined')
+            this.#videoMode = ModeMap[str];
+	}
+
+    getNoteList() {
+        let ary = [];
+
+        for (let audf = 31; audf >= 0; audf--)
+            ary.push(new TIANote(super.Music, this.VideoMode, this.AUDC, audf));
+
+        return ary;
+    }
+    /*
+    getNoteList() {
+        let ary = [];
+
+        for (let idx in this.AUDC) {
+            let audc = this.AUDC[idx];
+
+            if (audc == '')
+                continue;
+
+            for (let audf = 31; audf >= 0; audf--) {
+                let args = {
+                    'videoMode': this.VideoMode,
+                    'audc': audc,
+			        'audf': audf
+                };
+
+                let note = new TIANote(super.Music, args);
+                ary.push(note);
+            }
+        }
+
+        return ary;
+    }
+    */
+}
+
+/*
+export class TIANote extends MusicNote {
+	#videoMode = null;
 	#audc = 0;
 	#audf = 0;
 	#cents = 0.0;
@@ -69,9 +210,9 @@ export class TIANote extends MusicNote {
  		if (args.audf < 0 || args.audf >= 32)
 			args.audf = 0;
 
-        let tiaFrequency = args.mode.AudioFrequency / Divisors[args.audc] / (args.audf+1);
+        let tiaFrequency = args.videoMode.AudioFrequency / Divisors[args.audc] / (args.audf+1);
         super(music, { frequency: tiaFrequency }, true);
-		this.#mode = args.mode;
+		this.#videoMode = args.videoMode;
         this.#audc = args.audc;
         this.#audf = args.audf;
         this.#nearestNote = new MusicNote(super.Music, { keyNum: super.KeyNum, microDist: super.MicroDist });
@@ -91,7 +232,7 @@ export class TIANote extends MusicNote {
 	}
 
     clone() {
-		let args = { mode: this.#mode, audc: this.AUDC, audf: this.AUDF };
+		let args = { videoMode: this.#videoMode, audc: this.AUDC, audf: this.AUDF };
         return new TIANote(super.Music, args);
     }
 
@@ -99,44 +240,12 @@ export class TIANote extends MusicNote {
         if (audc < 0 || audc >= 16 || audf < 0 || audf >= 32)
             return 0.0;
 
-        return this.#mode.AudioFrequency / Divisors[audc] / (audf+1);
+        return this.#videoMode.AudioFrequency / Divisors[audc] / (audf+1);
     }
 
     getNearestMusicNote() {
         return this.#nearestNote;
     }
 }
+*/
 
-export class TIAScale extends MusicScale {
-	#mode = ModeMap.ntsc;
-	#audc = 0;
-
-    constructor(music, args) {
-        super(music);
-		this.#audc = args.audc;
-		if (args.mode != '')
-			this.setModeByString(args.mode);
-    }
-
-	get VideoMode() { return this.#mode };
-	get AUDC() { return this.#audc }
-
-    setModeByString(str) {
-        if (typeof ModeMap[str] != 'undefined')
-            this.#mode = ModeMap[str];
-	}
-
-    getNoteList() {
-        let args = { 'mode': this.#mode, 'audc': this.AUDC, 'audf': 0 };
-
-        //console.notice(console.stream.tia, "getNoteList " + this.
-        let ary = [];
-        for (let audf = 31; audf >= 0; audf--) {
-			args.audf = audf;
-
-            let note = new TIANote(super.Music, args);
-            ary.push(note);
-        }
-        return ary;
-    }
-}

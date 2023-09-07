@@ -21,7 +21,9 @@
 <script type="module">
     import { Options } from "./js/Options.js";
     import { Music } from "./js/Music/Music.js";
-    import { Synth} from "./js/Music/Synth.js";
+	import { NoteListBuilder } from "./js/Music/NoteListBuilder.js"
+	import { TIAInstrument } from "./js/Music/Instruments/TIAInstrument.js"
+    import { Synth } from "./js/Music/Synth.js";
     import { MidiParser, MidiCC } from "./js/Music/Midi.js"
     import { PageUI } from "./js/UI/PageUI.js";
     import { PageController } from "./js/UI/PageController.js";
@@ -43,18 +45,18 @@
 	let pageUI = new PageUI(opts, mainForm);
     let pageController = new PageController(opts, pageUI);
 
-	let instrumentArgs = {
-		audc: opts.getAtariTone(0),
+	let args = {
+		audc: opts.AtariTones,
 		mode: opts.VideoFormat,
+		bounds: NoteListBuilder.getTIABounds(pageController.Music, args),
 	};
-    let synth = new Synth(new AudioContext(), pageController.Music, instrumentArgs);
+    let synth = new Synth(new AudioContext(), pageController.Music, args);
 
     if (synth.AudioContext.state == 'running') {
         pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
         pageController.addSynth(synth);
 		pageUI.enableSynth();
 		pageController.enableInstrument(opts.Instrument);
-		//pageController.Synth.MasterVolume = pageUI.MasterVolume / pageUI.MaxVolume;
 
     } else if (synth.AudioContext.state == 'suspended') {
         pageUI.log('Web Audio: waiting for mouse click to enable.');
@@ -70,7 +72,6 @@
                 pageController.addSynth(synth);
 				pageUI.enableSynth();
 				pageController.enableInstrument(opts.Instrument);
-				//pageController.Synth.MasterVolume = pageUI.MasterVolume / pageUI.MaxVolume;
                 pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
             },
             { once: true }
@@ -154,12 +155,12 @@
                 <label for="AtariTone0Id" title="Select first Atari tone between 0 and 15">Atari tone 1 (AUDC)</label>
 
                 <select id="AtariTone1Id" name="AtariTone1" class="frm">
-                  <option value=""></option>
+                  <option value="" selected></option>
                   <option value="0">0 or 11 (silence)</option>
                   <option value="1">1 (buzzy high pitch)</option>
                   <option value="2">2 (noisy engine)</option>
                   <option value="3">3 (buzzy engine)</option>
-                  <option value="4" selected>4 or 5 (pure high tone)</option>
+                  <option value="4">4 or 5 (pure high tone)</option>
                   <option value="6">6 or 10 (buzzy pure)</option>
                   <option value="7">7 or 9 (buzzy medium pitch)</option>
                   <option value="8">8 (noise)</option>
@@ -170,12 +171,12 @@
                 <label for="AtariTone1Id" title="Select second Atari tone">Atari tone 2 (AUDC)</label>
 
                 <select id="AtariTone2Id" name="AtariTone2" class="frm">
-                  <option value=""></option>
+                  <option value="" selected></option>
                   <option value="0">0 or 11 (silence)</option>
                   <option value="1">1 (buzzy high pitch)</option>
                   <option value="2">2 (noisy engine)</option>
                   <option value="3">3 (buzzy engine)</option>
-                  <option value="4" selected>4 or 5 (pure high tone)</option>
+                  <option value="4">4 or 5 (pure high tone)</option>
                   <option value="6">6 or 10 (buzzy pure)</option>
                   <option value="7">7 or 9 (buzzy medium pitch)</option>
                   <option value="8">8 (noise)</option>
@@ -239,11 +240,15 @@
                 <label for="ExpandPianoId" title="Expand piano to include out of range Atari notes">Expand</label>
                 -->
 
-                <input type="checkbox" id="StretchPianoId" class="frm" name="StretchPiano" value="Yes">
-                <label for="StretchPianoId" title="Stretch to fit to note range">Stretch</label>
-
                 <input type="checkbox" id="JumpToFirstId" name="JumpToFirst" class="frm" value="Yes">
                 <label for="JumpToFirstId" title="Scroll to the first Atari note">Scroll</label>
+
+				<br>
+                <input type="checkbox" id="Fixed88KeysId" class="frm" name="Fixed88Keys" value="Yes">
+                <label for="Fixed88KeysId" title="Lock piano roll to standard 88 keys">Fixed 88 Keys</label>
+
+                <input type="checkbox" id="StretchFitId" class="frm" name="StretchFit" value="Yes">
+                <label for="StretchFitId" title="Stretch table to TIA note range">Stretch Fit</label>
 
                 <!--
                 <select id="CentTypeId" class="frm" style="width:75px" disabled>
@@ -254,6 +259,8 @@
                 <label for="CentTypeId" title="Filter notes with positive or negative cents">Cent Filter</label>
                 -->
 
+				<br>
+				<br>
                 <button id="ResetId" name="Reset">Reload Defaults</button>
               </div>
             </fieldset>
