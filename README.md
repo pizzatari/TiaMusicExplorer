@@ -1,4 +1,4 @@
 # atari2600music
-Web files for the Atari 2600 Music Explorer page hosted on Github
+Web files for the TIA Music Explorer page hosted on Github
 
-Located at: https://github.com/pizzatari/atari2600music
+Located at: https://github.com/pizzatari/TiaMusicExplorer
