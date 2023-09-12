@@ -7,13 +7,14 @@
 </script>
 
 <base href="../0.1/">
-<title>Atari 2600 Music Explorer</title>
+<title>TIA Music Explorer (for the Atari 2600 and 7800 consoles)</title>
 <script src="./js/UI/Logger.js"></script>
 
 <link href="./jquery/code.jquery.com_ui_1.13.2_themes_base_jquery-ui.css" rel="stylesheet">
 <script src="./jquery/code.jquery.com_jquery-3.6.4.min.js" integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
 <script src="./jquery/code.jquery.com_ui_1.13.2_jquery-ui.min.js" integrity="sha256-lSjKY0/srUM9BE3dPm+c4fBo1dky2v27Gdjm2uoZaL0=" crossorigin="anonymous"></script>
 
+<link href="./css/site.css" rel="stylesheet">
 <link href="./css/index.css" rel="stylesheet">
 <link href="./css/background.css" rel="stylesheet">
 <link href="./css/colors.css" rel="stylesheet">
@@ -110,13 +111,26 @@
 		for (let i of synth.Instruments)
 			console.notice(console.stream.index, "instrument: " + i.Name + ", Polyphony=" + i.Polyphony + " Volume=" + i.Volume);
 	});
+
+    var atariScreenNotified = false;
+    document.querySelector("body").addEventListener('mousedown', (evt) => {
+        if(!atariScreenNotified) {
+            Javatari.screenElement.dispatchEvent(new MouseEvent('mousedown', {
+                bubbles: false,
+                cancelable: true,
+                view: window
+            }));
+            atariScreenNotified = true;
+        }
+    });
+
 </script>
 </head>
 
 <body class="background">
 <header>
-  <h1 class="rounded">Atari 2600 Music Explorer
-    (<a href="https://pizzatari.github.io/atari2600music" title="Canonical link to this site">https://pizzatari.github.io/atari2600music</a>)
+  <h1 class="rounded"><span class="rainbow">TIA Music Explorer</span> <span>(for the Atari 2600 and 7800 consoles)</span>
+    ( <a href="https://pizzatari.github.io/atari2600music" title="Canonical link to this site">https://pizzatari.github.io/atari2600music</a>)
   </h1>
 </header>
 

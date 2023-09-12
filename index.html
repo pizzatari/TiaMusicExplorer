@@ -8,27 +8,51 @@ var vers = "0.1";
 </script>
 
 <style>
-h1 {
-    font-size:14pt;
+body * {
+    font-family:Tahoma,Verdana,sans-serif;
+    font-size:12pt;
+}
+body {
+	color:#fff;
+    background-color:rgb(129,0,66);
+    background-repeat:none;
+    background-size:100% 3000px;
+}
+a { color:#000 }
+h1 { font-size:14pt }
+body > div {
+	padding:4px;
+	color:#000;
+	background-color:#fff;
+	border:1px solid;
+	border-radius:4px;
 }
 </style>
 
-<title>Atari 2600 Music Explorer</title>
+<link href="css/background.css" rel="stylesheet">
+
+<title>TIA Music Explorer</title>
 
 </head>
-<body>
+<body class="background">
 
-<h1>Atari 2600 Music Explorer</h1>
+<h1>TIA Music Explorer (for the Atari 2600 and 7800 consoles)</h1>
 
-<script>
-let rnd = Math.random();
-document.write(`<p>Please <a href="./index.html?${rnd}" title="Click here">click here to continue</a>
- to the Atari 2600 Music Explorer page to access the latest version (${vers}).</p>`);
-</script>
-
-<p>This is to ensure you are not loading a cached version if you've visited the site before.</p>
-
-<p>If these pages showing older cached versions, press CTRL-SHIFT-R (or CTRL-SHIFT-F5) to force a hard refresh. Clearing your cache will also work.</p>
+<div>
+	<p>Please 
+		<script>
+		let rnd = Math.random();
+		document.write(`<a href="./index.html?${rnd}" title="Click here">click here to continue</a>
+ 	 	 to the Music Explorer page to access the latest version (${vers}).`);
+		</script>
+	</p>
+	<p>
+		This is to ensure you are not loading a cached version if you've visited the site before.
+	</p>
+	<p>
+		If these pages showing older cached versions, press CTRL-SHIFT-R (or CTRL-SHIFT-F5) to force a hard refresh. Clearing your cache will also work.
+	</p>
+</div>
 
 </body>
 

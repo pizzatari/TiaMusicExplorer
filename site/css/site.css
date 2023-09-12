@@ -1,0 +1,13 @@
+.rainbow {
+    font-size:14pt;
+    padding:2px 10px;
+    color:#fff;
+    text-shadow:
+        2px 2px 0 #000,
+        -2px 2px 0 #000,
+        -2px -2px 0 #000,
+        2px -2px 0 #000;
+    background-image: linear-gradient(to top, violet, cyan, chartreuse, yellow, orange, red);
+    border:solid #000;
+    border-width:2px 0;
+}
