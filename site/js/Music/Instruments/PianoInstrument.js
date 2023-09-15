@@ -29,8 +29,8 @@ export class PianoInstrument extends SynthInstrument {
 
     #sustainedNotes = new Map();
 
-    constructor(audioCtx, noteList) {
-        super("Piano", noteList);
+    constructor(audioCtx, scale) {
+        super("Piano", scale);
         this.#audioCtx = audioCtx;
 
         let gain = this.#audioCtx.createGain();

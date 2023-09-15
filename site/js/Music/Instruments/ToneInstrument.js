@@ -15,8 +15,8 @@ export class ToneInstrument extends SynthInstrument {
 
     #sustainedNotes = new Map();
 
-    constructor(audioCtx, noteList) {
-        super("Tone", noteList);
+    constructor(audioCtx, scale) {
+        super("Tone", scale);
         this.#audioCtx = audioCtx;
 
         for (let i = 0; i < super.Polyphony; i++) {
@@ -45,14 +45,6 @@ export class ToneInstrument extends SynthInstrument {
 		    for (let node of this.#audioNodes)
                 node.oscillator.type = type;
         }
-    }
-
-    enable() {
-        console.notice(console.stream.synth, "enabling " + super.Name);
-    }
-
-    disable() {
-        console.notice(console.stream.synth, "disabling " + super.Name);
     }
 
     noteOn(midiNote, microDist = 0, velocity = 1.0) {

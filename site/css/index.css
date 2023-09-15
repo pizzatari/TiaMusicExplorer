@@ -1,15 +1,14 @@
-/* General tags */
-body { color:#000 }
-header > h1 { color:#000 }
 main section {
     width:100%;
     margin-bottom:4px;
 }
+header.centerbox {
+    float:none;
+    width:auto;
+}
 
 /* 3 column layout */
-.columns {
-    display:flex;
-}
+.columns { display:flex }
 .columns > .column:nth-child(2) {
     flex:2 1 auto;
     min-width:300px;
@@ -28,11 +27,8 @@ main section {
     border-radius:5px;
 }
 
-fieldset > legend {
-    font-weight:bold;
-}
-
 /* Result Options panel */
+fieldset > legend { font-weight:bold }
 .panel fieldset input,
 .panel fieldset select {
     float:left;
@@ -104,8 +100,6 @@ input#PolyphonyId { width:3em; }
 }
 .piano span.white {
     color:#000;
-    /*background-color:hsl(235deg,40%,75%);*/
-    /*background-color:hsl(220deg,30%,50%);*/
     background-color:hsl(240deg,5%,60%);
     background-image:none;
 }
@@ -145,9 +139,7 @@ input#PolyphonyId { width:3em; }
     border-radius:6px 0 0 6px;
     text-align:left;
 }
-#VPiano tr.hidden {
-    visibility:collapse;
-}
+#VPiano tr.hidden { visibility:collapse; }
 #VPiano tr.hidden td { text-align:right }
 #VPiano tr.hidden span.black {
     visibility:visible;
@@ -255,17 +247,8 @@ span.error {
     text-align:center;
     vertical-align:middle;
 }
-#VPiano sub {
-    font-size:0.8em;
-    /*vertical-align:middle;*/
-}
+#VPiano sub { font-size:0.8em }
 #VPiano span {
     vertical-align:top;
     line-height:20px;
 }
-
-/* miscellaneous */
-/*
-    background-image:linear-gradient(#ffc, #bbf, #ffc);
-    background-image:linear-gradient(#000, #555, #000);
-*/

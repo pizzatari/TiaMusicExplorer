@@ -22,10 +22,7 @@
 <script type="module">
     import { Options } from "./js/Options.js";
     import { Music } from "./js/Music/Music.js";
-	import { NoteListBuilder } from "./js/Music/NoteListBuilder.js"
-	import { TIAInstrument } from "./js/Music/Instruments/TIAInstrument.js"
     import { Synth } from "./js/Music/Synth.js";
-    import { MidiParser, MidiCC } from "./js/Music/Midi.js"
     import { PageUI } from "./js/UI/PageUI.js";
     import { PageController } from "./js/UI/PageController.js";
 
@@ -43,46 +40,22 @@
     opts.loadFromStorage();
     opts.writeToForm(mainForm);
 
-	let pageUI = new PageUI(opts, mainForm);
+	let pageUI = new PageUI(opts);
     let pageController = new PageController(opts, pageUI);
 
-	let args = {
+    let synth = new Synth(new AudioContext(), pageController.Music, {
 		audc: opts.AtariTones,
 		mode: opts.VideoFormat,
-	};
-	args['bounds'] = NoteListBuilder.getTIABounds(pageController.Music, args);
-    let synth = new Synth(new AudioContext(), pageController.Music, args);
+	});
 
-    if (synth.AudioContext.state == 'running') {
-        pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
-        pageController.addSynth(synth);
-		pageUI.enableSynth();
-		pageController.enableInstrument(opts.Instrument);
+    pageController.addSynth(synth);
+	pageController.enableInstrument(opts.Instrument);
 
-    } else if (synth.AudioContext.state == 'suspended') {
-        pageUI.log('Web Audio: waiting for mouse click to enable.');
-    } else {
-        pageUI.log('Web Audio: ' + pageUI.toStatusMsg("ERROR", "error"));
-    }
-
-    // enable audio on click if browser requires a click
-    if (synth.AudioContext.state != 'running') {
-        document.querySelector('html').addEventListener('click',
-            (evt) => {
-                synth.AudioContext.resume();
-                pageController.addSynth(synth);
-				pageUI.enableSynth();
-				pageController.enableInstrument(opts.Instrument);
-                pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
-            },
-            { once: true }
-        );
-    }
+    pageUI.log('Web Audio: waiting for mouse click to enable.');
 
 	// enable MIDI support
     let midi = null;
-    let midiOpts = { software: true };
-    navigator.requestMIDIAccess(midiOpts).then(
+    navigator.requestMIDIAccess({software:true}).then(
         (midiAccess) => {
             midi = midiAccess;
             pageController.addMIDIAccess(midi);
@@ -110,29 +83,40 @@
 
 		for (let i of synth.Instruments)
 			console.notice(console.stream.index, "instrument: " + i.Name + ", Polyphony=" + i.Polyphony + " Volume=" + i.Volume);
+
+		document.querySelector("body").addEventListener('mousedown', MouseDownHandler, {once:true});
 	});
 
-    var atariScreenNotified = false;
-    document.querySelector("body").addEventListener('mousedown', (evt) => {
-        if(!atariScreenNotified) {
-            Javatari.screenElement.dispatchEvent(new MouseEvent('mousedown', {
-                bubbles: false,
-                cancelable: true,
-                view: window
-            }));
-            atariScreenNotified = true;
-        }
-    });
+	function MouseDownHandler(evt) {
+		synth.AudioContext.resume().then(
+			() => {
+				pageController.enable();
+				pageUI.enableSynth();
+        		pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
+			},
+			() => {
+				pageUI.log('Web Audio: ' + pageUI.toStatusMsg("ERROR", "error"));
+			}
+		);
 
+		// forward mouse click to Javatari
+        Javatari.screenElement.dispatchEvent(new MouseEvent('mousedown', {
+        	bubbles: false,
+        	cancelable: true,
+        	view: window
+		}));
+	}
 </script>
 </head>
 
 <body class="background">
 
-<header>
-  <h1 class="rounded"><span class="rainbow">TIA Music Explorer</span> <span>(for the Atari 2600 and 7800 consoles)</span>
-    ( <a href="https://pizzatari.github.io/atari2600music" title="Canonical link to this site">https://pizzatari.github.io/atari2600music</a>)
-  </h1>
+<header class="centerbox">
+	<h1 class="rounded">
+		<span class="logo rainbow">TIA Music Explorer</span>
+		<span class="subtitle">for the Atari 2600 and 7800 consoles</span>
+		<a class="github" href="https://pizzatari.github.io/TiaMusicExplorer" title="Canonical link to this site">https://pizzatari.github.io/TiaMusicExplorer</a>
+	</h1>
 </header>
 
 <main>
@@ -416,12 +400,15 @@
             </ul>
 
             <div id="VPiano"></div>
+
             <div id="RecorderTab"></div>
+
             <div id="EmulatorTab">
               <div id="javatari" style="text-align: center; margin: 20px auto 0; padding: 0 10px;">
                 <div id="javatari-screen" style="box-shadow: 2px 2px 10px rgba(0, 0, 0, .7);"></div>
               </div>
             </div>
+
           </div><!-- ui-tabs -->
         </div><!-- panel -->
       </div><!-- middle column -->

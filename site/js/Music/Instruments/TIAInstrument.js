@@ -18,8 +18,8 @@ const TIA_AUDV = [ TIA_AUDV0, TIA_AUDV1 ];
 
 export class TIAInstrument extends SynthInstrument {
 
-    constructor(noteList) {
-        super("TIA", noteList);
+    constructor(scale) {
+        super("TIA", scale);
         super.Polyphony = 2;
         super.PolyphonyLocked = true;
 		super.Slots = [ 0, 1 ];

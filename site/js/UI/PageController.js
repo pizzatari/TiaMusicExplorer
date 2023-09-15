@@ -23,24 +23,9 @@ export class PageController {
         this.#pageUI = pageUI;
     	this.#music = this.getMusic(opts);
 
-        this.#pageUI.updateScale(opts.Scale);
+        this.#pageUI.Scale = opts.Scale;
 		this.#pageForm = new PageForm(opts, this, this.#pageUI.MainForm);
-		this.#updateNoteTables();
-
-		this.#pageForm.addEventListener("fullupdate", (e) => {
-        	this.#updateNoteTables();
-        	this.#updateSynth();
-		});
-		this.#pageForm.addEventListener("pianoupdate", (e) => {
-        	this.#updateNoteTables();
-        	this.#updateSynth();
-		});
-		this.#pageForm.addEventListener("atariupdate", (e) => {
-        	this.#updateNoteTables();
-        	this.#updateSynth();
-		});
-
-        this.#setPageHandlers();
+		this.#updatePianos();
     }
 
 	get PageUI() { return this.#pageUI }
@@ -51,9 +36,7 @@ export class PageController {
     addSynth(synth) {
         this.#synth = synth;
         this.#pageUI.Polyphony = synth.ActiveInstrument.Polyphony;
-
-        this.#setHPianoHandlers();
-        this.#setVPianoHandlers();
+        this.#updateSynth();
     }
 
     addMIDIAccess(m) {
@@ -69,6 +52,38 @@ export class PageController {
 
         this.#updateMidiPorts();
         this.#setMidiHandlers();
+    }
+
+    enable() {
+        this.#setHPianoHandlers();
+        this.#setVPianoHandlers(this.#opts.StretchFit);
+
+        this.PageUI.MainForm.elements['JumpToFirst'].addEventListener('change',
+			(evt) => {
+            	let bounds = this.NoteTable.NoteBounds;
+            	if (evt.target.checked && bounds.firstMidiNum > 0)
+                	pageUI.scrollTo(bounds.firstMidiNum);
+			}
+        );
+
+		this.#pageForm.addEventListener("fullupdate", (e) => {
+        	this.#updatePianos();
+        	this.#updateSynth();
+            this.#setHPianoHandlers();
+            this.#setVPianoHandlers(this.#opts.StretchFit);
+		});
+		this.#pageForm.addEventListener("pianoupdate", (e) => {
+        	this.#updatePianos();
+        	this.#updateSynth();
+            this.#setHPianoHandlers();
+            this.#setVPianoHandlers(this.#opts.StretchFit);
+		});
+		this.#pageForm.addEventListener("atariupdate", (e) => {
+        	this.#updatePianos();
+        	this.#updateSynth();
+            this.#setHPianoHandlers();
+            this.#setVPianoHandlers(this.#opts.StretchFit);
+		});
     }
 
     enableInstrument(instrument) {
@@ -104,7 +119,7 @@ export class PageController {
 		return music;
 	}
 
-	#updateNoteTables() {
+	#updatePianos() {
         console.log("PageController ");
         console.log(this.#opts);
         console.log(this.#music);
@@ -127,22 +142,23 @@ export class PageController {
             console.log("TIA bounds: ");
             console.log(bounds);
         }
+
     	this.#pianoNotes = NoteListBuilder.getPianoNotes(this.#music, bounds);
-
     	this.#noteTable = NoteListBuilder.getNoteTable(this.#pianoNotes, this.#tiaNotes);
-    	this.#pageUI.updatePianos(this.#noteTable);
 
-        this.#setHPianoHandlers();
-        this.#setVPianoHandlers(this.#opts.StretchFit);
+    	this.#pageUI.renderPianos(this.#noteTable);
 	}
 
     #updateSynth() {
+        if (this.#synth == null)
+            return;
+
         let instruments = this.#synth.Instruments;
         for (let inst of instruments) {
             if (inst.Name == 'TIA')
-                inst.setNoteList(this.#tiaNotes);
+                inst.Scale = this.#tiaNotes;
             else
-                inst.setNoteList(this.#pianoNotes);
+                inst.Scale = this.#pianoNotes;
         }
 	}
 
@@ -180,37 +196,37 @@ export class PageController {
                 if (e.buttons & 1) {
                     let result = 'error';
 
-                    this.#synth.ActiveInstrument.allNotesOff();
+                    this.#synth.allNotesOff();
                     if (excluded != 'yes') {
-                        let note = this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
+                        let note = this.#synth.noteOn(midiNum, microDist);
                         if (note != null)
                             result = 'on';
                     }
 
-                    this.#pageUI.updateKeyStatus(midiNum, microDist, result);
+                    this.#pageUI.renderKeyState(midiNum, microDist, result);
                 }
             });
             key.addEventListener("mouseenter", (e) => {
                 if (e.buttons & 1) {
                     let result = 'error';
 
-                    this.#synth.ActiveInstrument.allNotesOff();
+                    this.#synth.allNotesOff();
                     if (excluded != 'yes') {
-                        let note = this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
+                        let note = this.#synth.noteOn(midiNum, microDist);
                         if (note != null)
                             result = 'on';
                     }
 
-                    this.#pageUI.updateKeyStatus(midiNum, microDist, result);
+                    this.#pageUI.renderKeyState(midiNum, microDist, result);
                 }
             });
             key.addEventListener("mouseup", (e) => {
-                this.#synth.ActiveInstrument.allNotesOff();
-                this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
+                this.#synth.allNotesOff();
+                this.#pageUI.renderKeyState(midiNum, microDist, 'off');
             });
             key.addEventListener("mouseleave", (e) => {
-                this.#synth.ActiveInstrument.allNotesOff();
-                this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
+                this.#synth.allNotesOff();
+                this.#pageUI.renderKeyState(midiNum, microDist, 'off');
             });
         }
     }
@@ -242,37 +258,37 @@ export class PageController {
                     if (e.buttons & 1) {
                         let result = 'error';
 
-                        this.#synth.ActiveInstrument.allNotesOff();
+                        this.#synth.allNotesOff();
                         if (excluded != 'yes') {
-                            let note = this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
+                            let note = this.#synth.noteOn(midiNum, microDist);
                             if (note != null)
                                 result = 'on';
                         }
 
-                        this.#pageUI.updateKeyStatus(midiNum, microDist, result);
+                        this.#pageUI.renderKeyState(midiNum, microDist, result);
                     }
                 });
                 key.addEventListener("mouseenter", (e) => {
                     if (e.buttons & 1) {
                         let result = 'error';
 
-                        this.#synth.ActiveInstrument.allNotesOff();
+                        this.#synth.allNotesOff();
                         if (excluded != 'yes') {
-                            let note = this.#synth.ActiveInstrument.noteOn(midiNum, microDist);
+                            let note = this.#synth.noteOn(midiNum, microDist);
                             if (note != null)
                                 result = 'on';
                         }
 
-                        this.#pageUI.updateKeyStatus(midiNum, microDist, result);
+                        this.#pageUI.renderKeyState(midiNum, microDist, result);
                     }
                 });
                 key.addEventListener("mouseup", (e) => {
-                    this.#synth.ActiveInstrument.allNotesOff();
-                    this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
+                    this.#synth.allNotesOff();
+                    this.#pageUI.renderKeyState(midiNum, microDist, 'off');
                 });
                 key.addEventListener("mouseleave", (e) => {
-                    this.#synth.ActiveInstrument.allNotesOff();
-                    this.#pageUI.updateKeyStatus(midiNum, microDist, 'off');
+                    this.#synth.allNotesOff();
+                    this.#pageUI.renderKeyState(midiNum, microDist, 'off');
                 });
             }
         }
@@ -285,7 +301,6 @@ export class PageController {
 
             input.onmidimessage = (evt) => {
                 console.notice(console.stream.midi, "midimessage " + evt.type);
-
                 //this.#midiDebugOutput(evt);
 
                 this.#handleMidiMessage(evt);
@@ -299,21 +314,21 @@ export class PageController {
         parser.parse(evt.data);
 
         if (parser.NoteOn) {
-            let note = this.#synth.ActiveInstrument.noteOn(parser.MidiNum, 0, parser.Velocity/127);
+            let note = this.#synth.noteOn(parser.MidiNum, 0, parser.Velocity/127);
             if (note != null)
-                this.#pageUI.updateKeyStatus(parser.MidiNum, 0, 'on');
+                this.#pageUI.renderKeyState(parser.MidiNum, 0, 'on');
             else
-                this.#pageUI.updateKeyStatus(parser.MidiNum, 0, 'error');
+                this.#pageUI.renderKeyState(parser.MidiNum, 0, 'error');
 
         } else if (parser.NoteOff) {
-            this.#synth.ActiveInstrument.noteOff(parser.MidiNum, 0);
-            this.#pageUI.updateKeyStatus(parser.MidiNum, 0, 'off');
+            this.#synth.noteOff(parser.MidiNum, 0);
+            this.#pageUI.renderKeyState(parser.MidiNum, 0, 'off');
 
         } else if (parser.SustainOn) {
-                //this.#synth.SustainOn();
+            this.#synth.SustainOn();
 
         } else if (parser.SustainOff) {
-                //this.#synth.SustainOff();
+            this.#synth.SustainOff();
 
         } else if (parser.IsControl) {
             if (parser.ControlKey == MidiCC.VOLUME || parser.ControlKey == MidiCC.ALESIS_VOLUME) {
@@ -352,67 +367,8 @@ export class PageController {
                 	pageUI.scrollTo(bounds.firstMidiNum);
 			}
         );
-
-        /*
-        document.querySelector('#JumpToFirstId').addEventListener('change',
-			(evt) => {
-            	let bounds = noteTable.NoteBounds;
-            	if (evt.target.checked && bounds.firstMidiNum > 0)
-                	pageUI.scrollTo(bounds.firstMidiNum);
-			}
-        );
-        */
     }
 }
-
-
-/*
-        for (let [id, input] of this.#midiAccess.inputs) {
-            input.value.onmidimessage = (message) => {
-                this.#midiParser.parse(message);
-
-                if (this.#midiParser.NoteOn) {
-                    let noteFound = this.#synth.noteOn(this.#midiParser.MidiNote, 0, this.#midiParser.Velocity/127.0);
-                    let elems = document.querySelectorAll('.mn_' + this.#midiParser.MidiNote + '_0');
-                    if (noteFound != null) {
-                        for (let elem of elems)
-                            elem.classList.add('NoteOn');
-
-                        noteElem.innerHTML = noteFound.Letter + " (" + (Math.round(noteFound.Frequency*100)/100) + " Hz)";
-                    } else {
-                        for (let elem of elems)
-                            elem.classList.add('NoteError');
-                    }
-
-                } else if (this.#midiParser.NoteOff) {
-                    let noteFound = this.#synth.noteOff(this.#midiParser.MidiNote, 0);
-                    let elems = document.querySelectorAll('.mn_' + this.#midiParser.MidiNote + '_0');
-                    if (noteFound != null) {
-                        for (let elem of elems)
-                            elem.classList.remove('NoteOn');
-                    } else {
-                        for (let elem of elems)
-                            elem.classList.remove('NoteError');
-                    }
-
-                } else if (this.#midiParser.SustainOn) {
-                        this.#synth.sustainOn();
-
-                } else if (this.#midiParser.SustainOff) {
-                        this.#synth.sustainOff();
-
-                } else if (this.#midiParser.IsControl) {
-                    if (this.#midiParser.ControlKey == MidiCC.VOLUME || this.#midiParser.ControlKey == MidiCC.ALESIS_VOLUME) {
-                        let volume = document.querySelector('#VolumeId');
-                        volume.value = this.#midiParser.Value;
-                        this.#synth.MasterVolume = this.#midiParser.Value / 127.0;
-                    }
-                }
-            }
-        }
-    }
-}
-*/
 
 export class PageForm extends EventTarget {
 	#opts = null;
@@ -450,30 +406,30 @@ export class PageForm extends EventTarget {
         });
 
     	let validators = {
-        	'VideoFormat': (evt) => {
+        	'VideoFormat':      (evt) => {
                 console.notice(console.stream.ui, "changing video format to " + this.#form.elements['VideoFormat'].value);
                 this.#update({ atari: true })
 				this.#pageUI.loadCartridge(this.#opts.CartridgeURL);
             },
-        	'AtariTone0': (evt) => { this.#update({ full: true }) },
-        	'AtariTone1': (evt) => { this.#update({ atari: true }) },
-        	'AtariTone2': (evt) => { this.#update({ atari: true }) },
-        	'TuningMethod': (evt) => { this.#update({ piano: true }) },
-        	'TuningGradient': (evt) => { this.#update({ full: true }) },
-        	'PrintBlackKeys': (evt) => { this.#update({ full: true }) },
+        	'AtariTone0':       (evt) => { this.#update({ full: true }) },
+        	'AtariTone1':       (evt) => { this.#update({ atari: true }) },
+        	'AtariTone2':       (evt) => { this.#update({ atari: true }) },
+        	'TuningMethod':     (evt) => { this.#update({ piano: true }) },
+        	'TuningGradient':   (evt) => { this.#update({ full: true }) },
+        	'PrintBlackKeys':   (evt) => { this.#update({ full: true }) },
         	//'PrintFrequency': (evt) => { this.#update({ full: true }) },
-        	'ShrinkPiano': (evt) => { this.#update({ full: true }) },
-        	'StretchFit': (evt) => { this.#update({ full: true }) },
-        	'JumpToFirst': (evt) => { this.#update({ }) },
-        	'Instrument': (evt) => {
+        	'ShrinkPiano':      (evt) => { this.#update({ full: true }) },
+        	'StretchFit':       (evt) => { this.#update({ full: true }) },
+        	'JumpToFirst':      (evt) => { this.#update({ }) },
+        	'Instrument':       (evt) => {
                 this.#controller.enableInstrument(evt.target.value);
 				this.#update({ none: true });
             },
-            'Scale': (evt) => {
+            'Scale':            (evt) => {
 				this.#update({ full: true });
             },
-        	//'Polyphony': (evt) => { this.#resetSynth(this.#form.elements['Instrument'].value) }
-        	'A4Frequency': (evt) => {
+        	//'Polyphony':      (evt) => { this.#resetSynth(this.#form.elements['Instrument'].value) }
+        	'A4Frequency':      (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 1);
             	this.#form.elements['A4FrequencyRange'].value = value;
 				this.#music.A4Frequency = value;
@@ -485,7 +441,7 @@ export class PageForm extends EventTarget {
 				this.#music.A4Frequency = value;
 				this.#update({ full: true });
         	},
-        	'CentTranspose': (evt) => {
+        	'CentTranspose':    (evt) => {
             	let value = parseInt(evt.target.value);
             	this.#form.elements['CentTransposeRange'].value = value;
 				this.#music.CentTranspose = value;
@@ -497,7 +453,7 @@ export class PageForm extends EventTarget {
 				this.#music.CentTranspose = value;
 				this.#update({ full: true });
         	},
-        	'NumMicroTones': (evt) => {
+        	'NumMicroTones':    (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 1);
             	this.#form.elements['NumMicroTonesRange'].value = value;
 				this.#music.NumMicroTones = value;
@@ -521,7 +477,7 @@ export class PageForm extends EventTarget {
 				this.#music.TuningSensitivity = value;
 				this.#update({ atari: true });
         	},
-        	'Volume': (evt) => {
+        	'Volume':           (evt) => {
                 if (this.#controller.Synth == null)
                     return;
 
@@ -532,7 +488,7 @@ export class PageForm extends EventTarget {
                 this.#controller.Synth.MasterVolume = volume / this.#pageUI.MaxVolume;
 				this.#update({});
             },
-        	'VolumeRange': (evt) => {
+        	'VolumeRange':      (evt) => {
                 if (this.#controller.Synth == null)
                     return;
 

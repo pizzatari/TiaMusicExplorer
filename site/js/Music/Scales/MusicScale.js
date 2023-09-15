@@ -199,7 +199,7 @@ export class MusicNote {
 }
 
 // produces the scale 88 key keyboards use: keys A0 to C8
-export class MusicScale {
+export class MusicScale extends Array {
     #music = null;
     #bounds = null;
 
@@ -225,6 +225,8 @@ export class MusicScale {
     set LastKeyNum(num) { this.#lastKeyNum = num }
 
     constructor(music, bounds=null) {
+        super();
+
         if (music == null)
             this.#music = new Music();
         else

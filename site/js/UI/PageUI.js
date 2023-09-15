@@ -13,9 +13,9 @@ export class PageUI {
     #horizontalPiano = null;
     #verticalPiano = null;
 
-    constructor(opts, mainForm) {
+    constructor(opts) {
         this.#opts = opts;
-        this.#mainForm = mainForm;
+        this.#mainForm = document.querySelector('#MainFormId');
         this.#horizontalPiano = document.querySelector('#HPiano');
         this.#verticalPiano = document.querySelector('#VPiano');
     }
@@ -54,12 +54,20 @@ export class PageUI {
         return document.querySelector('#VerticalKeys');
     }
 
-    updatePianos(noteTable) {
+    set Scale(name) {
+    	if (name == 'TIA') {
+        	this.disableScale('TIA');
+    	} else {
+        	this.enableScale(this.#opts.Scale);
+    	}
+    }
+
+    renderPianos(noteTable) {
         this.#horizontalPiano.innerHTML = this.#getHorizontalPiano(noteTable);
         this.#verticalPiano.innerHTML = this.#getVerticalPiano(noteTable);
     }
 
-    updateKeyStatus(midiNum, microDist, state = 'off') {
+    renderKeyState(midiNum, microDist, state = 'off') {
         let key1 = document.querySelector('#h_' + midiNum + '_' + microDist);
         let key2 = document.querySelector('#v_' + midiNum + '_' + microDist);
         let className = 'key-' + state;
@@ -73,14 +81,6 @@ export class PageUI {
             key2.classList.remove('key-off', 'key-on', 'key-error');
             key2.classList.add(className);
         }
-    }
-
-    updateScale(name) {
-    	if (name == 'TIA') {
-        	this.disableScale('TIA');
-    	} else {
-        	this.enableScale(this.#opts.Scale);
-    	}
     }
 
     enableSynth() {

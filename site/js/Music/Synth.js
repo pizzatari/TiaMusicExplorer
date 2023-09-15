@@ -23,12 +23,14 @@ export class Synth {
         this.#music = music;
 		this.#args = args;
 
-        let pianoNotes = NoteListBuilder.getPianoNotes(this.#music, this.#args.bounds);
-        let tiaList = NoteListBuilder.getTIANotes(this.#music, this.#args);
+        let pianoScale = NoteListBuilder.getPianoNotes(this.#music);
+        let tiaScale = NoteListBuilder.getTIANotes(this.#music, this.#args);
+        this.addScale(pianoScale);
+        this.addScale(tiaScale);
 
-        let tone = new ToneInstrument(this.#audioCtx, pianoNotes);
-    	let piano = new PianoInstrument(this.#audioCtx, pianoNotes);
-        let tia = new TIAInstrument(tiaList);
+        let tone = new ToneInstrument(this.#audioCtx, pianoScale);
+    	let piano = new PianoInstrument(this.#audioCtx, pianoScale);
+        let tia = new TIAInstrument(tiaScale);
 
         this.addInstrument(tone);
     	this.addInstrument(piano);
@@ -55,35 +57,8 @@ export class Synth {
         this.#activeInstrument.Volume = vol;
     }
 
-    /*
-    restart() {
-		for (let [name, instrument] of this.#instruments)
-			instrument.disable();
-
-		this.#instruments.clear()
-		this.#scales.clear()
-
-        let pianoNotes = NoteListBuilder.getPianoNotes(this.#music, this.#args.Bounds);
-
-        let tone = new ToneInstrument(this.#audioCtx, pianoNotes);
-        this.addInstrument(tone);
-
-    	let piano = new PianoInstrument(this.#audioCtx, pianoNotes);
-    	this.addInstrument(piano);
-
-    	//let tiaList = NoteListBuilder.getTIANotes(this.#music, this.#args);
-    	//let tia = new TIAInstrument(tiaList);
-    	//this.addInstrument(tia);
-
-        this.#activeInstrument = tone;
-        this.#activeInstrument.enable();
-        this.#activeInstrument.Volume = this.#masterVolume;
-    }
-    */
-
     addInstrument(instrument) {
         if (this.#instruments.has(instrument.Name)) {
-            console.notice(console.stream.synth, "replacing instrument with" + instrument.Name);
             let currInstrument = this.#instruments.get(instrument.Name);
             currInstrument.disable();
         }
@@ -93,8 +68,6 @@ export class Synth {
     enableInstrument(name) {
         let instrument = this.#instruments.get(name);
         if (instrument != null) {
-            console.notice(console.stream.synth, "enabling instrument " + name);
-
             if (!instrument.equals(this.#activeInstrument))
                 this.#activeInstrument.disable();
 
@@ -107,11 +80,6 @@ export class Synth {
     }
 
     addScale(scale) {
-        if (this.#scales.has(scale.Name)) {
-            console.notice(console.stream.synth, "replacing scale with " + scale.Name);
-            let currScale = this.#scales.get(scale.Name);
-            currScale.disable();
-        }
         this.#scales.set(scale.Name, scale);
     }
 
@@ -133,17 +101,49 @@ export class Synth {
         }
     }
 
-    pause() {
-        this.#activeInstrument.pause();
-    }
-
-    resume() {
-        this.#activeInstrument.resume();
-    }
+    enable() {
+        this.#activeInstrument.enable();
+	}
 
     disable() {
         this.#activeInstrument.disable();
-    }
+	}
+
+    noteOn() {
+		return this.#activeInstrument.noteOn(...arguments);
+	}
+
+    noteOff() {
+		return this.#activeInstrument.noteOn(...arguments);
+	}
+
+	allNotesOff() {
+		this.#activeInstrument.allNotesOff();
+	}
+
+    sustainOn() {
+		this.#activeInstrument.sustainOn();
+	}
+
+    sustainOff() {
+		this.#activeInstrument.keyOn(...arguments);
+	}
+
+    keyOn() {
+		this.#activeInstrument.keyOn(...arguments);
+	}
+
+    keyOff() {
+		this.#activeInstrument.keyOff(...arguments);
+	}
+
+    playNote() {
+		this.#activeInstrument.playNote(...arguments);
+	}
+
+    playKey() {
+		this.#activeInstrument.playKey(...arguments);
+ 	}
 
     mute() {
         this.#activeInstrument.mute();

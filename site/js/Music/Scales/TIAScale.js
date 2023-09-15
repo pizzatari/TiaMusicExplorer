@@ -109,7 +109,6 @@ export class TIANote extends MusicNote {
 
 export class TIAScale extends MusicScale {
 	#videoMode = ModeMap.ntsc;
-	//#audc = [0];
 	#audc = 0;
 
     #bounds = {
@@ -134,14 +133,6 @@ export class TIAScale extends MusicScale {
 		this.#bounds.lastMidiNum = music.FrequencyToMidiNum(maxFreq);
 		this.#bounds.lastKeyNum = music.FrequencyToKeyNum(maxFreq);
     }
-    /*
-    constructor(music, args) {
-        super(music);
-		this.#audc = args.audc;
-		if (args.mode != '')
-			this.setModeByString(args.mode);
-    }
-    */
 
 	get VideoMode() { return this.#videoMode };
 	get AUDC() { return this.#audc }
@@ -164,88 +155,4 @@ export class TIAScale extends MusicScale {
 
         return ary;
     }
-    /*
-    getNoteList() {
-        let ary = [];
-
-        for (let idx in this.AUDC) {
-            let audc = this.AUDC[idx];
-
-            if (audc == '')
-                continue;
-
-            for (let audf = 31; audf >= 0; audf--) {
-                let args = {
-                    'videoMode': this.VideoMode,
-                    'audc': audc,
-			        'audf': audf
-                };
-
-                let note = new TIANote(super.Music, args);
-                ary.push(note);
-            }
-        }
-
-        return ary;
-    }
-    */
 }
-
-/*
-export class TIANote extends MusicNote {
-	#videoMode = null;
-	#audc = 0;
-	#audf = 0;
-	#cents = 0.0;
-
-    #tones = [1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 14, 15];
-    #allTones = Array(16).fill(0).map((e,i) => { return 15 - i });
-    #allPitches = Array(32).fill(0).map((e,i) => { return 31 - i });
-
-    #nearestNote = null;
-
-    constructor(music, args) {
-        if (args.audc < 0 || args.audc >= 16)
-            args.audc = 0;
- 		if (args.audf < 0 || args.audf >= 32)
-			args.audf = 0;
-
-        let tiaFrequency = args.videoMode.AudioFrequency / Divisors[args.audc] / (args.audf+1);
-        super(music, { frequency: tiaFrequency }, true);
-		this.#videoMode = args.videoMode;
-        this.#audc = args.audc;
-        this.#audf = args.audf;
-        this.#nearestNote = new MusicNote(super.Music, { keyNum: super.KeyNum, microDist: super.MicroDist });
-        this.#cents = Music.CentsBetween(this.#nearestNote.Frequency, tiaFrequency);
-    }
-
-	get AUDC() { return this.#audc }
-	get AUDF() { return this.#audf }
-	get Cents() { return this.#cents }
-    get TIALabel() { return "" + this.AUDC + "/" + this.AUDF; }
-
-	getCentsRounded(precision = null) {
-        if (precision === null)
-            return Music.Round(this.#cents, super.Music.FrequencyPrecision);
-
-        return Music.Round(this.#cents, parseInt(precision));
-	}
-
-    clone() {
-		let args = { videoMode: this.#videoMode, audc: this.AUDC, audf: this.AUDF };
-        return new TIANote(super.Music, args);
-    }
-
-    computeFrequency(audc, audf) {
-        if (audc < 0 || audc >= 16 || audf < 0 || audf >= 32)
-            return 0.0;
-
-        return this.#videoMode.AudioFrequency / Divisors[audc] / (audf+1);
-    }
-
-    getNearestMusicNote() {
-        return this.#nearestNote;
-    }
-}
-*/
-
