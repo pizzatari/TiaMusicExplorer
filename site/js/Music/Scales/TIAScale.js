@@ -1,5 +1,5 @@
 import { Music } from "../Music.js"
-import { MusicScale, MusicNote } from "../Scales/MusicScale.js"
+import { MusicScale, MusicNote, NoteList } from "../Scales/MusicScale.js"
 
 // NoteFrequency = OscillatorRate / ColorClocks / WaveformLength / NoteValue
 // https://forums.atariage.com/topic/257526-musicsound-programming-question-atari-2600/
@@ -57,13 +57,10 @@ export class TIANote extends MusicNote {
 	#videoMode = null;
 	#audc = 0;
 	#audf = 0;
-	#cents = 0.0;
 
     #tones = [1, 2, 3, 4, 5, 7, 8, 9, 12, 13, 14, 15];
     #allTones = Array(16).fill(0).map((e,i) => { return 15 - i });
     #allPitches = Array(32).fill(0).map((e,i) => { return 31 - i });
-
-    #nearestNote = null;
 
     constructor(music, videoMode, audc, audf) {
         audc = (audc >= 0 && audc < 16) ? audc : 0;
@@ -74,22 +71,24 @@ export class TIANote extends MusicNote {
 		this.#videoMode = videoMode;
         this.#audc = audc;
         this.#audf = audf;
-        this.#nearestNote = new MusicNote(super.Music, { keyNum: super.KeyNum, microDist: super.MicroDist });
-        this.#cents = Music.CentsBetween(this.#nearestNote.Frequency, tiaFrequency);
+        //this.#nearestNote = new MusicNote(super.Music, { keyNum: super.KeyNum, microDist: super.MicroDist });
+        //this.#cents = Music.CentsBetween(this.#nearestNote.Frequency, tiaFrequency);
     }
 
     get VideoMode() { return this.#videoMode }
 	get AUDC() { return this.#audc }
 	get AUDF() { return this.#audf }
-	get Cents() { return this.#cents }
+	//get Cents() { return this.#cents }
     get TIALabel() { return "" + this.AUDC + "/" + this.AUDF }
 
+    /*
 	getCentsRounded(precision = null) {
         if (precision === null)
             return Music.Round(this.Cents, super.Music.FrequencyPrecision);
 
         return Music.Round(this.Cents, parseInt(precision));
 	}
+    */
 
     clone() {
         return new TIANote(super.Music.clone(), this.VideoMode, this.AUDC, this.AUDF); 
@@ -102,12 +101,15 @@ export class TIANote extends MusicNote {
         return this.VideoMode.AudioFrequency / Divisors[audc] / (audf+1);
     }
 
+    /*
     getNearestMusicNote() {
         return this.#nearestNote;
     }
+    */
 }
 
 export class TIAScale extends MusicScale {
+    #name = 'TIA';
 	#videoMode = ModeMap.ntsc;
 	#audc = 0;
 
@@ -134,6 +136,7 @@ export class TIAScale extends MusicScale {
 		this.#bounds.lastKeyNum = music.FrequencyToKeyNum(maxFreq);
     }
 
+    get Name() { return this.#name }
 	get VideoMode() { return this.#videoMode };
 	get AUDC() { return this.#audc }
 
@@ -148,11 +151,11 @@ export class TIAScale extends MusicScale {
 	}
 
     getNoteList() {
-        let ary = [];
+        let noteList = new NoteList(this.Name);
 
         for (let audf = 31; audf >= 0; audf--)
-            ary.push(new TIANote(super.Music, this.VideoMode, this.AUDC, audf));
+            noteList.pushNote(new TIANote(super.Music, this.VideoMode, this.AUDC, audf));
 
-        return ary;
+        return noteList;
     }
 }

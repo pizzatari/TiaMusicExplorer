@@ -182,9 +182,9 @@ export class PageUI {
             let excluded = '';
 
 			if (note != null) {
-                if (Math.abs(note.Cents) <= this.#opts.TuningSensitivity) {
+                if (Math.abs(row.Cents) <= this.#opts.TuningSensitivity) {
 				    if (this.#opts.TuningGradient) {
-    				    colorClass = ' ' + this.#keyGradientCSS(note.Cents, this.#opts.TuningSensitivity);
+    				    colorClass = ' ' + this.#keyGradientCSS(row.Cents, this.#opts.TuningSensitivity);
 					    classNames += ' paired-gradient' + colorClass;
 				    } else {
 					    classNames += ' paired-flat';
@@ -227,8 +227,8 @@ export class PageUI {
 <table id="VerticalKeys" class="piano">
 <tr>
 	<th title="Piano Key">Key</th>
-	<th title="Piano frequence">Freq</th>
-	<th title="Atari Tone (AUDC)">Tone</th>
+	<th title="Piano frequency">Freq</th>
+	<th title="Atari Tone (AUDC/AUDF)">Tone</th>
 	<th title="Tone Frequency">Freq</th>
 	<th title="Tuning difference between piano note and Atari note.">Cents</th>
 	<th title="Piano key number / MIDI Key Number">Key</th>
@@ -241,7 +241,8 @@ export class PageUI {
 	}
 
 	#VTableRow(row) {
-		let key = this.#VTableKey(row.KeyNote, row.TIANote);
+		//let key = this.#VTableKey(row.KeyNote, row.TIANote);
+		let key = this.#VTableKey(row);
 		let classNames = key.classNames;
 
         if (!this.#opts.PrintBlackKeys && row.KeyNote.IsBlack)
@@ -259,9 +260,11 @@ export class PageUI {
 		if (row.TIANote != null) {
 			tiaLabel = row.TIANote.TIALabel;
 			tiaFrequency = row.TIANote.Frequency;
-			tiaCents = row.TIANote.Cents;
+			//tiaCents = row.TIANote.Cents;
+			tiaCents = row.Cents;
 			tiaFrequencyRounded = row.TIANote.Frequency.toFixed(2);
-			tiaCentsRounded = row.TIANote.Cents.toFixed(2);
+			//tiaCentsRounded = row.TIANote.Cents.toFixed(2);
+			tiaCentsRounded = row.Cents.toFixed(2);
             tiaMicro = "[" + row.TIANote.Octave + "." + row.TIANote.MicroDist + "]";
             tiaKeyNum = row.TIANote.KeyNum + "/" + row.TIANote.MidiNum;
             tiaMicroId = row.TIANote.MicroId;
@@ -279,7 +282,12 @@ export class PageUI {
 </tr>`;
 	}
 
-	#VTableKey(keyNote, note=null) {
+    //let key = this.#VTableKey(row.KeyNote, row.TIANote);
+	//#VTableKey(keyNote, note=null) {
+	#VTableKey(row) {
+        let keyNote = row.KeyNote;
+        let note = row.TIANote;
+
     	let keyId = 'v_' + keyNote.MidiNum + '_' + keyNote.MicroDist;
         let midiNum = 'MicroDist="' + keyNote.MicroDist + '"';
         let microDist = 'MidiNum="' + keyNote.MidiNum + '"';
@@ -289,9 +297,9 @@ export class PageUI {
         let excluded = '';
 
 		if (note != null) {
-            if (Math.abs(note.Cents) <= this.#opts.TuningSensitivity) {
+            if (Math.abs(row.Cents) <= this.#opts.TuningSensitivity) {
 			    if (this.#opts.TuningGradient) {
-    			    colorClass = this.#keyGradientCSS(note.Cents, this.#opts.TuningSensitivity);
+    			    colorClass = this.#keyGradientCSS(row.Cents, this.#opts.TuningSensitivity);
 				    classNames += ' paired-gradient ' + colorClass;
 			    } else {
 				    classNames += ' paired-flat';

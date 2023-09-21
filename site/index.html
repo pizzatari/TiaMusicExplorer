@@ -47,9 +47,7 @@
 		audc: opts.AtariTones,
 		mode: opts.VideoFormat,
 	});
-
     pageController.addSynth(synth);
-	pageController.enableInstrument(opts.Instrument);
 
     pageUI.log('Web Audio: waiting for mouse click to enable.');
 
@@ -82,7 +80,10 @@
 		pageUI.loadCartridge(opts.CartridgeURL);
 
 		for (let i of synth.Instruments)
-			console.notice(console.stream.index, "instrument: " + i.Name + ", Polyphony=" + i.Polyphony + " Volume=" + i.Volume);
+			console.notice(console.stream.index, `instrument: ${i.Name}, Polyphony=${i.Polyphony}, Volume=${i.Volume}, Scale=${i.NoteList.Name}`);
+
+		for (let i of synth.Scales)
+			console.notice(console.stream.index, "scale: " + i.Name);
 
 		document.querySelector("body").addEventListener('mousedown', MouseDownHandler, {once:true});
 	});

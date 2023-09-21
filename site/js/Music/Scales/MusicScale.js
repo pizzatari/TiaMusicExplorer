@@ -199,7 +199,8 @@ export class MusicNote {
 }
 
 // produces the scale 88 key keyboards use: keys A0 to C8
-export class MusicScale extends Array {
+export class MusicScale {
+    #name = 'Piano';
     #music = null;
     #bounds = null;
 
@@ -210,6 +211,7 @@ export class MusicScale extends Array {
     //#firstKeyNum = -50;
     //#lastKeyNum = 115;
 
+    get Name() { return this.#name }
     get Music() { return this.#music }
 
     get FirstOctave() { return this.#firstOctave }
@@ -225,8 +227,6 @@ export class MusicScale extends Array {
     set LastKeyNum(num) { this.#lastKeyNum = num }
 
     constructor(music, bounds=null) {
-        super();
-
         if (music == null)
             this.#music = new Music();
         else
@@ -240,7 +240,7 @@ export class MusicScale extends Array {
     }
 
     getNoteList() {
-        let ary = [];
+        let noteList = new NoteList(this.Name);
         let mid = this.#music.NumMicroTones > 0 ? (this.#music.NumMicroTones-1)/2 : 0;
         let startDistance = 0-Math.floor(mid);	// ...-2, -1, 0
         let endDistance = Math.ceil(mid);		// 0, +1, +2...
@@ -252,10 +252,66 @@ export class MusicScale extends Array {
             for(let dist = startDistance; dist <= endDistance; ++dist) {
                 let args = { keyNum: keyNum, microDist: dist };
                 let note = new MusicNote(this.#music, args);
-                ary.push(note);
+                noteList.pushNote(note);
             }
         }
 
-        return ary;
+        return noteList;
+    }
+}
+
+export class NoteList extends Array {
+    #name = '(none)';
+
+    #noteBounds = {
+        firstMicroId: Number.MAX_VALUE, lastMicroId: -Number.MAX_VALUE,
+        firstMidiNum: Number.MAX_VALUE, lastMidiNum: -Number.MAX_VALUE,
+        firstKeyNum:  Number.MAX_VALUE, lastKeyNum:  -Number.MAX_VALUE,
+    };
+
+    constructor(name) {
+        super();
+        this.#name = name;
+    }
+
+    set Name(val) { this.#name = val }
+    get Name() { return this.#name }
+
+    get Bounds() { return this.#noteBounds }
+
+    pushNote(note) {
+        this.push(note);
+
+        if (note.MicroId < this.#noteBounds.firstMicroId)
+            this.#noteBounds.firstMicroId = note.MicroId;
+
+        if (note.MicroId > this.#noteBounds.lastMicroId)
+            this.#noteBounds.lastMicroId = note.MicroId;
+
+        if (note.MidiNum < this.#noteBounds.firstMidiNum)
+            this.#noteBounds.firstMidiNum = note.MidiNum;
+
+        if (note.MidiNum > this.#noteBounds.lastMidiNum)
+            this.#noteBounds.lastMidiNum = note.MidiNum;
+
+        if (note.KeyNum < this.#noteBounds.firstKeyNum)
+            this.#noteBounds.firstKeyNum = note.KeyNum;
+
+        if (note.KeyNum > this.#noteBounds.lastKeyNum)
+            this.#noteBounds.lastKeyNum = note.KeyNum;
+    }
+
+    pushNotes(ary) {
+        for (let i=0; i < ary.length; i++)
+            this.pushNote(ary[i]);
+    }
+
+    clone() {
+        let list = new NoteList(this.Name);
+
+        for (let i=0; i < this.length; i++)
+            list.pushNote(this[i].clone());
+
+        return list;
     }
 }

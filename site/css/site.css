@@ -14,6 +14,7 @@ main section.centerbox {
     width:700px;
     margin:auto;
     margin-bottom:5px;
+    padding-right:21px;
     border:1px solid;
     border-radius:4px;
     font-size:12pt;

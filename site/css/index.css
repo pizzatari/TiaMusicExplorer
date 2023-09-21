@@ -139,18 +139,21 @@ input#PolyphonyId { width:3em; }
     border-radius:6px 0 0 6px;
     text-align:left;
 }
-#VPiano tr.hidden { visibility:collapse; }
+#VPiano tr.hidden {
+    visibility:collapse;
+    height:1px;
+    max-height:1px;
+}
 #VPiano tr.hidden td { text-align:right }
 #VPiano tr.hidden span.black {
     visibility:visible;
-    position:relative;
     width:80px;
     height:24px;
-    top:-3px;
-    right:-10p;
+    position:absolute; /* cannot be relative, must be absolute for Firefox */
+    top:-14px;
+    right:0;
     z-index:10;
     padding:0px 4px;
-    border-radius:6px 0 0 6px;
 }
 .piano th {
     border-bottom:1px solid black;
@@ -243,7 +246,6 @@ span.error {
     height:24px;
     line-height:20px;
     padding:0px;
-    margin:0px;
     text-align:center;
     vertical-align:middle;
 }

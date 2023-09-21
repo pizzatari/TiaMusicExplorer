@@ -23,14 +23,15 @@ export class Synth {
         this.#music = music;
 		this.#args = args;
 
-        let pianoScale = NoteListBuilder.getPianoNotes(this.#music);
-        let tiaScale = NoteListBuilder.getTIANotes(this.#music, this.#args);
-        this.addScale(pianoScale);
-        this.addScale(tiaScale);
+        let pianoNoteList = NoteListBuilder.getPianoNoteList(this.#music);
+        let tiaNoteList = NoteListBuilder.getTIANoteList(this.#music, this.#args);
 
-        let tone = new ToneInstrument(this.#audioCtx, pianoScale);
-    	let piano = new PianoInstrument(this.#audioCtx, pianoScale);
-        let tia = new TIAInstrument(tiaScale);
+        this.addScale(pianoNoteList);
+        this.addScale(tiaNoteList);
+
+        let tone = new ToneInstrument(this.#audioCtx, pianoNoteList);
+    	let piano = new PianoInstrument(this.#audioCtx, pianoNoteList);
+        let tia = new TIAInstrument(tiaNoteList);
 
         this.addInstrument(tone);
     	this.addInstrument(piano);
@@ -45,7 +46,9 @@ export class Synth {
 
     get AudioContext() { return this.#audioCtx }
     get Instruments() { return this.#instruments.values() }
+    get Scales() { return this.#scales.values() }
     get ActiveInstrument() { return this.#activeInstrument }
+    get ActiveScale() { return this.#activeScale }
 
     get MasterVolume() {
         return this.#masterVolume;
@@ -65,9 +68,15 @@ export class Synth {
         this.#instruments.set(instrument.Name, instrument);
     }
 
-    enableInstrument(name) {
-        let instrument = this.#instruments.get(name);
+    addScale(noteList) {
+        this.#scales.set(noteList.Name, noteList);
+    }
+
+    enableInstrument(instrumentName) {
+        let instrument = this.#instruments.get(instrumentName);
         if (instrument != null) {
+            console.notice(console.stream.synth, "enabling instrument " + instrumentName);
+
             if (!instrument.equals(this.#activeInstrument))
                 this.#activeInstrument.disable();
 
@@ -75,29 +84,22 @@ export class Synth {
             this.#activeInstrument.enable();
             this.#activeInstrument.Volume = this.#masterVolume;
         } else {
-            console.notice(console.stream.synth, "instrument not found: " + name);
+            console.notice(console.stream.synth, "instrument not found: " + instrumentName);
         }
     }
 
-    addScale(scale) {
-        this.#scales.set(scale.Name, scale);
-    }
+    enableScale(scaleName) {
+        let noteList = this.#scales.get(scaleName);
+        if (noteList != null) {
+            console.notice(console.stream.synth, "enabling noteList " + scaleName);
 
-    enableScale(name) {
-        let scale = this.#scales.get(name);
-        if (scale != null) {
-            console.notice(console.stream.synth, "enabling scale " + name);
+            if ( this.ActiveInstrument.Name != 'TIA' ||
+                (this.ActiveInstrument.Name == 'TIA' && scaleName == 'TIA')) {
 
-            if (!scale.equals(this.#activeScale)) {
-                console.notice(console.stream.synth, "replacing active scale " + name);
-                this.#activeScale.disable();
+                this.ActiveInstrument.NoteList = noteList;
             }
-
-            this.#activeScale = scale;
-            this.#activeScale.enable();
-            this.#activeScale.Volume = this.MasterVolume;
         } else {
-            console.notice(console.stream.synth, "scale not found: " + name);
+            console.notice(console.stream.synth, "noteList not found: " + scaleName);
         }
     }
 

@@ -1,53 +1,85 @@
 import { Music } from "./Music.js";
-import { MusicScale, MusicNote } from "./Scales/MusicScale.js";
+import { MusicScale, MusicNote, NoteList } from "./Scales/MusicScale.js";
 import { TIAScale, TIANote, ModeMap, Divisors } from "./Scales/TIAScale.js";
+
+export class NotePair {
+    #first = null;
+    #second = null;
+    #cents = 0.0;
+
+    constructor(firstNote, secondNote) {
+        this.#first = firstNote;
+        this.#second = secondNote;
+        this.#cents = Music.CentsBetween(firstNote.Frequency, secondNote.Frequency);
+    }
+
+    get First() { return this.#first }
+    get Second() { return this.#second }
+    get Cents() { return this.#cents }
+}
 
 // maps a key note to a group of similar notes
 export class NoteGroup {
     #keyNote = null;
-    #noteList = [];
+    #pairList = [];
 
     constructor(keyNote) {
         this.#keyNote = keyNote;
     }
 
     get KeyNote() { return this.#keyNote }
-    get NoteList() { return this.#noteList }
+    //get NoteList() { return this.#noteList }
     get BestNote() {
-        if (this.#noteList.length > 0)
-            return this.#noteList[0];
+        if (this.#pairList.length > 0)
+            return this.#pairList[0].Second;
+        return null;
+    }
+    get BestNotePair() {
+        if (this.#pairList.length > 0)
+            return this.#pairList[0];
         return null;
     }
     get ListLength() {
-        return this.#noteList.length;
+        return this.#pairList.length;
     }
 
     addNote(note) {
-        this.#noteList.push(note);
+        this.#pairList.push(new NotePair(this.KeyNote, note));
         this.sort();
     }
 
     addNoteList(noteList) {
-        this.#noteList = this.#noteList.concat(noteList);
+        noteList.forEach((note) => {
+            this.#pairList.push(new NotePair(this.KeyNote, note));
+        });
         this.sort();
     }
 
     sort() {
-        this.#noteList.sort((a,b) => {
-            let c = a.Frequency - b.Frequency;
-            if (c != 0)
-                return c;
+        this.#pairList.sort((a,b) => {
+            let c = a.Second.Frequency - b.Second.Frequency;
+            if (c != 0) return c;
             return Math.abs(a.Cents) - Math.abs(b.Cents);
         });
     }
 }
 
+/*
 export class NoteList extends Array {
+    #name = '(none)';
+
     #noteBounds = {
         firstMicroId: Number.MAX_VALUE, lastMicroId: -Number.MAX_VALUE,
         firstMidiNum: Number.MAX_VALUE, lastMidiNum: -Number.MAX_VALUE,
         firstKeyNum:  Number.MAX_VALUE, lastKeyNum:  -Number.MAX_VALUE,
     };
+
+    constructor(name) {
+        this.#name = name;
+    }
+
+    set Name(val) { this.#name = val }
+    get Name() { return this.#name }
 
     get Bounds() { return this.#noteBounds }
 
@@ -79,7 +111,7 @@ export class NoteList extends Array {
     }
 
     clone() {
-        let list = new NoteList();
+        let list = new NoteList(this.Name);
 
         for (let i=0; i < this.length; i++)
             list.pushNote(this[i].clone());
@@ -87,37 +119,28 @@ export class NoteList extends Array {
         return list;
     }
 }
+*/
 
 // map = MicroId -> NoteGroup
 export class NoteTable extends Map {
-    #pivotNoteList = new NoteList();
-    #noteList = new NoteList();
+    #pianoNoteList = null;
+    #tiaNoteList = null;
 
     #matchedNotes = [];
     #unmatchedNotes = [];
 
-    constructor(pivotNoteAry, noteAry) {
+    constructor(pianoNoteList, tiaNoteList) {
         super();
+        this.#pianoNoteList = pianoNoteList;
+        this.#tiaNoteList = tiaNoteList;
 
-        this.#pivotNoteList.pushNotes(pivotNoteAry);
-
-        for (let note of pivotNoteAry)
+        // setup Map object
+        for (let note of pianoNoteList)
             this.set(note.MicroId, new NoteGroup(note));
 
-        this.joinList(noteAry);
-    }
-
-    get PivotNoteList() { return this.#pivotNoteList }
-    get NoteList() { return this.#noteList }
-
-    get PivotBounds() { return this.#pivotNoteList.Bounds }
-    get NoteBounds() { return this.#noteList.Bounds }
-
-    joinList(noteAry) {
-        this.#noteList.pushNotes(noteAry);
-
-        for (let n of noteAry) {
-            let note = n.clone(n);
+        // merge in tia notes
+        for (let n of tiaNoteList) {
+            let note = n.clone();
             let group = this.get(note.MicroId);
             if (group !== undefined) {
                 group.addNote(note);
@@ -129,12 +152,41 @@ export class NoteTable extends Map {
         }
     }
 
+    get PivotNoteList() { return this.#pianoNoteList }
+    get NoteList() { return this.#tiaNoteList }
+
+    get PivotBounds() { return this.#pianoNoteList.Bounds }
+    get NoteBounds() { return this.#tiaNoteList.Bounds }
+
+
+    /*
+    #joinList(noteList) {
+        if (this.#tiaNoteList == null)
+            this.#tiaNoteList = noteList;
+
+        this.#tiaNoteList.pushNotes(noteList);
+
+        for (let n of noteList) {
+            let note = n.clone(n);
+            let group = this.get(note.MicroId);
+            if (group !== undefined) {
+                group.addNote(note);
+                this.#matchedNotes.push(note);
+                //this.#analyzer.addPair(group);
+            } else {
+                this.#unmatchedNotes.push(note);
+            }
+        }
+    }
+    */
+
     getFlattenedTable() {
 		let ary = [];
 
         for (let [key, group] of this) {
 			let keyNote = group.KeyNote;
-			let note = group.BestNote;
+			let pair = group.BestNotePair;
+            let note = group.BestNote;
 
             // save a record of paired black notes
             if (ary.length > 0 && keyNote.IsBlack && note != null)
@@ -162,8 +214,9 @@ export class NoteTable extends Map {
             	TIAFrequencyRounded: note != null ? note.getFrequencyRounded() : '',
 				AUDC: note != null ? note.AUDC : '',
 				AUDF: note != null ? note.AUDF : '',
-				Cents: note != null ? note.Cents : '',
-				CentsRounded: note != null ? note.getCentsRounded() : '',
+				Cents: pair != null ? pair.Cents : '',
+				CentsRounded: pair != null ? pair.Cents : '',
+				//CentsRounded: pair != null ? pair.getCentsRounded() : '',
 				TIALabel: note != null ? note.AUDC + '/' + note.AUDF : '',
 
 
@@ -174,7 +227,11 @@ export class NoteTable extends Map {
                 TIASharpNote: null
 			};
             ary.push(row);
+
         }
+
+        console.log("NoteListBuilder: Flattened table");
+        //console.log(ary);
 
         return ary;
     }
@@ -183,15 +240,32 @@ export class NoteTable extends Map {
 export class NoteListBuilder {
     static tiaCache = new Map();
 
-    static getPianoNotes(music, bounds=null) {
-        let noteList = new NoteList();
-        let scale = new MusicScale(music, bounds);
+    static getPianoNoteList(music, bounds=null) {
+        console.log("getPianoNotes:");
 
-        noteList.pushNotes(scale.getNoteList());
+        let scale = new MusicScale(music, bounds);
+        let noteList = scale.getNoteList();
+        //console.log(noteList);
 
         return noteList;
     }
 
+    static getTIANoteList(music, args) {
+        console.log("getTIANotes:");
+
+        let noteList = new NoteList('TIA');
+
+        for (let i=0; i < args.audc.length; i++) {
+            let scale = new TIAScale(music, args.mode, args.audc[i]);
+            noteList.pushNotes(scale.getNoteList());
+        }
+
+        //console.log(noteList);
+
+        return noteList;
+    }
+
+    /*
     static getTIABounds(music, args) {
 		let videoMode = ModeMap[args.mode];
         let minFreq = Number.MAX_VALUE;
@@ -214,19 +288,11 @@ export class NoteListBuilder {
             firstKeyNum:  music.FrequencyToKeyNum(minFreq),  lastKeyNum:  music.FrequencyToKeyNum(maxFreq),
         };
     }
+    */
 
-    static getTIANotes(music, args) {
-        let noteList = new NoteList();
-
-        for (let i=0; i < args.audc.length; i++) {
-            let scale = new TIAScale(music, args.mode, args.audc[i]);
-            noteList.pushNotes(scale.getNoteList());
-        }
-
-        return noteList;
-    }
-
-    static getNoteTable(pivotNoteList, noteList) {
-        return new NoteTable(pivotNoteList, noteList);
+    static getNoteTable(music, args) {
+        let pianoNotes = this.getPianoNoteList(music);
+        let tiaNotes = this.getTIANoteList(music, args);
+        return new NoteTable(pianoNotes, tiaNotes);
     }
 }

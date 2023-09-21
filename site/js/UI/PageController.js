@@ -15,8 +15,8 @@ export class PageController {
     #midiParser = null;
 
 	#noteTable = null;
-    #tiaNotes = null;
-    #pianoNotes = null;
+    #tiaNoteList = null;
+    #pianoNoteList = null;
 
     constructor(opts, pageUI) {
         this.#opts = opts;
@@ -25,7 +25,9 @@ export class PageController {
 
         this.#pageUI.Scale = opts.Scale;
 		this.#pageForm = new PageForm(opts, this, this.#pageUI.MainForm);
-		this.#updatePianos();
+
+		this.#loadNoteLists();
+    	this.PageUI.renderPianos(this.#noteTable);
     }
 
 	get PageUI() { return this.#pageUI }
@@ -36,12 +38,11 @@ export class PageController {
     addSynth(synth) {
         this.#synth = synth;
         this.#pageUI.Polyphony = synth.ActiveInstrument.Polyphony;
-        this.#updateSynth();
     }
 
-    addMIDIAccess(m) {
+    addMIDIAccess(midiAccess) {
         this.#midiParser = new MidiParser();
-        this.#midiAccess = m;
+        this.#midiAccess = midiAccess;
 
         // handle MIDI keyboard insertion and removal
         this.#midiAccess.addEventListener('statechange', (evt) => {
@@ -58,6 +59,48 @@ export class PageController {
         this.#setHPianoHandlers();
         this.#setVPianoHandlers(this.#opts.StretchFit);
 
+		this.enableInstrument(this.#opts.Instrument);
+		this.enableScale(this.#opts.Scale);
+
+		this.#pageForm.addEventListener("fullupdate", (e) => {
+			this.#loadNoteLists();
+			this.#synth.addScale(this.#tiaNoteList);
+			this.#synth.addScale(this.#pianoNoteList);
+
+    		this.PageUI.renderPianos(this.#noteTable);
+            this.#setHPianoHandlers();
+            this.#setVPianoHandlers(this.#opts.StretchFit);
+
+			this.enableInstrument(this.#opts.Instrument);
+			this.enableScale(this.#opts.Scale);
+		});
+
+		this.#pageForm.addEventListener("pianoupdate", (e) => {
+			this.#loadNoteLists();
+			this.#synth.addScale(this.#tiaNoteList);
+			this.#synth.addScale(this.#pianoNoteList);
+
+    		this.PageUI.renderPianos(this.#noteTable);
+            this.#setHPianoHandlers();
+            this.#setVPianoHandlers(this.#opts.StretchFit);
+
+			this.enableInstrument(this.#opts.Instrument);
+			this.enableScale(this.#opts.Scale);
+		});
+
+		this.#pageForm.addEventListener("atariupdate", (e) => {
+			this.#loadNoteLists();
+			this.#synth.addScale(this.#tiaNoteList);
+			this.#synth.addScale(this.#pianoNoteList);
+
+    		this.PageUI.renderPianos(this.#noteTable);
+            this.#setHPianoHandlers();
+            this.#setVPianoHandlers(this.#opts.StretchFit);
+
+			this.enableInstrument(this.#opts.Instrument);
+			this.enableScale(this.#opts.Scale);
+		});
+
         this.PageUI.MainForm.elements['JumpToFirst'].addEventListener('change',
 			(evt) => {
             	let bounds = this.NoteTable.NoteBounds;
@@ -65,25 +108,6 @@ export class PageController {
                 	pageUI.scrollTo(bounds.firstMidiNum);
 			}
         );
-
-		this.#pageForm.addEventListener("fullupdate", (e) => {
-        	this.#updatePianos();
-        	this.#updateSynth();
-            this.#setHPianoHandlers();
-            this.#setVPianoHandlers(this.#opts.StretchFit);
-		});
-		this.#pageForm.addEventListener("pianoupdate", (e) => {
-        	this.#updatePianos();
-        	this.#updateSynth();
-            this.#setHPianoHandlers();
-            this.#setVPianoHandlers(this.#opts.StretchFit);
-		});
-		this.#pageForm.addEventListener("atariupdate", (e) => {
-        	this.#updatePianos();
-        	this.#updateSynth();
-            this.#setHPianoHandlers();
-            this.#setVPianoHandlers(this.#opts.StretchFit);
-		});
     }
 
     enableInstrument(instrument) {
@@ -109,6 +133,13 @@ export class PageController {
         this.Synth.MasterVolume = this.PageUI.MasterVolume / this.PageUI.MaxVolume;
     }
 
+    enableScale(scale) {
+        if (this.Synth == null)
+            return;
+
+        this.Synth.enableScale(scale);
+    }
+
 	getMusic(opts) {
 		let music = new Music();
     	music.A4Frequency = opts.A4Frequency;
@@ -119,47 +150,15 @@ export class PageController {
 		return music;
 	}
 
-	#updatePianos() {
-        console.log("PageController ");
-        console.log(this.#opts);
-        console.log(this.#music);
-
-    	this.#tiaNotes = NoteListBuilder.getTIANotes(this.#music, {
+	#loadNoteLists() {
+    	let args = {
             audc: this.#opts.AtariTones,
             mode: this.#opts.VideoFormat
-        });
+        };
 
-        let bounds = null; 
-        if(this.#opts.StretchFit) {
-            bounds = {
-                firstMicroId: this.#tiaNotes[0].MicroId,
-                lastMicroId: this.#tiaNotes[this.#tiaNotes.length-1].MicroId,
-                firstMidiNum: this.#tiaNotes[0].MidiNum,
-                lastMidiNum: this.#tiaNotes[this.#tiaNotes.length-1].MidiNum,
-                firstKeyNum: this.#tiaNotes[0].KeyNum,
-                lastKeyNum: this.#tiaNotes[this.#tiaNotes.length-1].KeyNum,
-            };
-            console.log("TIA bounds: ");
-            console.log(bounds);
-        }
-
-    	this.#pianoNotes = NoteListBuilder.getPianoNotes(this.#music, bounds);
-    	this.#noteTable = NoteListBuilder.getNoteTable(this.#pianoNotes, this.#tiaNotes);
-
-    	this.#pageUI.renderPianos(this.#noteTable);
-	}
-
-    #updateSynth() {
-        if (this.#synth == null)
-            return;
-
-        let instruments = this.#synth.Instruments;
-        for (let inst of instruments) {
-            if (inst.Name == 'TIA')
-                inst.Scale = this.#tiaNotes;
-            else
-                inst.Scale = this.#pianoNotes;
-        }
+    	this.#noteTable = NoteListBuilder.getNoteTable(this.#music, args);
+    	this.#pianoNoteList = this.#noteTable.PivotNoteList;
+    	this.#tiaNoteList = this.#noteTable.NoteList;
 	}
 
     #updateMidiPorts() {
@@ -411,7 +410,7 @@ export class PageForm extends EventTarget {
                 this.#update({ atari: true })
 				this.#pageUI.loadCartridge(this.#opts.CartridgeURL);
             },
-        	'AtariTone0':       (evt) => { this.#update({ full: true }) },
+        	'AtariTone0':       (evt) => { this.#update({ atari: true }) },
         	'AtariTone1':       (evt) => { this.#update({ atari: true }) },
         	'AtariTone2':       (evt) => { this.#update({ atari: true }) },
         	'TuningMethod':     (evt) => { this.#update({ piano: true }) },
@@ -421,13 +420,9 @@ export class PageForm extends EventTarget {
         	'ShrinkPiano':      (evt) => { this.#update({ full: true }) },
         	'StretchFit':       (evt) => { this.#update({ full: true }) },
         	'JumpToFirst':      (evt) => { this.#update({ }) },
-        	'Instrument':       (evt) => {
-                this.#controller.enableInstrument(evt.target.value);
-				this.#update({ none: true });
-            },
-            'Scale':            (evt) => {
-				this.#update({ full: true });
-            },
+			// force instrument/scale to refresh their note lists to pickup changes while inactive
+        	'Instrument':       (evt) => { this.#update({ full: true }) },
+            'Scale':            (evt) => { this.#update({ full: true }) },
         	//'Polyphony':      (evt) => { this.#resetSynth(this.#form.elements['Instrument'].value) }
         	'A4Frequency':      (evt) => {
             	let value = Math.max(parseInt(evt.target.value), 1);
@@ -513,9 +508,14 @@ export class PageForm extends EventTarget {
         }
 	}
 
-	#update(update) {
+	#update(update={}) {
         this.#opts.readFromForm(this.#form);
         this.#opts.saveToStorage();
+
+		this.#debugOutput();
+
+        if (update.none)
+            return;
 
 		if (update.full) { 
 			super.dispatchEvent(new Event("fullupdate"));
@@ -524,5 +524,16 @@ export class PageForm extends EventTarget {
 		} else if (update.atari) {
 			super.dispatchEvent(new Event("atariupdate"));
 		}
+	}
+
+	#debugOutput() {
+        for (let i of this.#controller.Synth.Instruments)
+            console.notice(console.stream.controller, `Instrument: ${i.Name}, Polyphony=${i.Polyphony}, Volume=${i.Volume}, Scale=${i.NoteList.Name}`);
+
+        for (let i of this.#controller.Synth.Scales)
+            console.notice(console.stream.controller, "Scale: " + i.Name);
+
+		let i = this.#controller.Synth.ActiveInstrument;
+        console.notice(console.stream.controller, `ACTIVE instrument: ${i.Name}, Polyphony=${i.Polyphony}, Volume=${i.Volume}, Scale=${i.NoteList.Name}`);
 	}
 }

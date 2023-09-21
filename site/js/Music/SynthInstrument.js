@@ -7,28 +7,29 @@ export class SynthInstrument {
     #polyphonyLocked = false;
     #midiMap = new Map();   // midiNum -> Note
     #keyMap = new Map();    // keyNum -> Note
-    #scale = null;
+    #noteList = null;       // array of notes
     
     #slotsFree = [];
     #slotsActive = new Map();
 
-    constructor(name, scale) {
-        this.#name = name;
-        this.#scale = scale;
+    constructor(instrumentName, noteList) {
+        this.#name = instrumentName;
+        this.NoteList = noteList;
     }
 
-    set Scale(scale) {
-        this.#scale = scale;
+    set NoteList(noteList) {
+        this.#noteList = noteList;
 
         this.#midiMap.clear();
         this.#keyMap.clear();
-        for (let note of scale) {
-            let key = this.Key(note.MidiNum, note.MicroDist);
-            this.#midiMap.set(key, note);
+
+        for (let note of noteList) {
+            let midiKey = this.Key(note.MidiNum, note.MicroDist);
+            this.#midiMap.set(midiKey, note);
             this.#keyMap.set(note.KeyNum, note);
         }
     }
-    get Scale() { return this.#scale }
+    get NoteList() { return this.#noteList }
 
     set Name(val) { this.#name = val }
     get Name() { return this.#name }
@@ -114,11 +115,11 @@ export class SynthInstrument {
     }
 
     enable() {
-        console.notice(console.stream.synth, "enabling " + this.Name);
+        //console.notice(console.stream.synth, "enabling " + this.Name);
     }
 
     disable() {
-        console.notice(console.stream.synth, "disabling " + this.Name);
+        //console.notice(console.stream.synth, "disabling " + this.Name);
     }
 
     // play midi note
