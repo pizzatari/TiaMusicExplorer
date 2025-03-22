@@ -85,7 +85,8 @@
 		for (let i of synth.Scales)
 			console.notice(console.stream.index, "scale: " + i.Name);
 
-		document.querySelector("body").addEventListener('mousedown', MouseDownHandler, {once:true});
+		document.querySelector("#StartAudioId").addEventListener('click', MouseDownHandler, {once:true});
+		//document.querySelector("body").addEventListener('mousedown', MouseDownHandler, {once:true});
 	});
 
 	function MouseDownHandler(evt) {
@@ -94,6 +95,7 @@
 				pageController.enable();
 				pageUI.enableSynth();
         		pageUI.log('Web Audio: ' + pageUI.toStatusMsg("OK", "ok"));
+                document.querySelector("#AudioStateId").innerHTML = "Audio Enabled";
 			},
 			() => {
 				pageUI.log('Web Audio: ' + pageUI.toStatusMsg("ERROR", "error"));
@@ -396,13 +398,13 @@
           <div class="ui-tabs" id="CenterTableId">
             <ul class="ui-tabs-nav">
               <li><a href="#VPiano">Note Table</a></li>
-              <li><a href="#RecorderTab">Recorder</a></li>
+              <!-- <li><a href="#RecorderTab">Recorder</a></li> -->
               <li><a href="#EmulatorTab">Emulator</a></li>
             </ul>
 
             <div id="VPiano"></div>
 
-            <div id="RecorderTab"></div>
+            <!-- <div id="RecorderTab"></div> -->
 
             <div id="EmulatorTab">
               <div id="javatari" style="text-align: center; margin: 20px auto 0; padding: 0 10px;">
@@ -417,6 +419,10 @@
       <!-- right column --> 
       <div class="column">
         <div class="panel">
+          <fieldset><legend>Audio</legend>
+              <div id="ControlsId"><button id="StartAudioId">Start Audio</button><span id="AudioStateId">Audio is paused.</span></div>
+          </fieldset>
+
           <fieldset class="info"><legend>Info</legend>
             <div class="collapsible">
               <div id="VidFreqId"></div>
@@ -442,7 +448,7 @@ title="Same as above, but as absolute value."></canvas>
             </div>
           </fieldset>
 
-          <fieldset><legend>"Tuned" Notes</legend>
+          <fieldset><legend>Tuned Notes</legend>
             <div id="TunedNotesListId"></div>
           </fieldset>
 

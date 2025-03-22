@@ -51,6 +51,7 @@ fieldset > legend { font-weight:bold }
     float:none;
     clear:none;
 }
+.panel #AudioStateId { margin-left:10px }
 .panel #VolumeRangeId {
     margin-top:3px;
     width:200px;
